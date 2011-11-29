@@ -1,0 +1,8 @@
+Revision history for Bio::BioStudio
+
+1.00	11.11.28
+        First version to CPAN and bitbucket
+1.01	11.11.28
+	Fixed minor function import issues
+	Removed gene_color from GBrowse.pm for localization issues
+

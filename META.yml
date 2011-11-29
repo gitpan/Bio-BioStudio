@@ -1,0 +1,54 @@
+---
+abstract: 'functions for the design of synthetic genomes'
+author:
+  - 'Sarah Richardson <notadoctor@jhu.edu>'
+build_requires:
+  Test::More: 0
+configure_requires:
+  Module::Build: 0.38
+dynamic_config: 1
+generated_by: 'Module::Build version 0.38, CPAN::Meta::Converter version 2.112150'
+license: bsd
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: Bio-BioStudio
+provides:
+  Bio::BioStudio::BLAST:
+    file: lib/Bio/BioStudio/BLAST.pm
+    version: 1.00
+  Bio::BioStudio::Basic:
+    file: lib/Bio/BioStudio/Basic.pm
+    version: 1.00
+  Bio::BioStudio::Diff:
+    file: lib/Bio/BioStudio/Diff.pm
+    version: 1.00
+  Bio::BioStudio::Foswiki:
+    file: lib/Bio/BioStudio/Foswiki.pm
+    version: 1.00
+  Bio::BioStudio::GBrowse:
+    file: lib/Bio/BioStudio/GBrowse.pm
+    version: 1.02
+  Bio::BioStudio::GFF3:
+    file: lib/Bio/BioStudio/GFF3.pm
+    version: 1.00
+  Bio::BioStudio::MySQL:
+    file: lib/Bio/BioStudio/MySQL.pm
+    version: 1.00
+requires:
+  Bio::DB::SeqFeature::Store: 0
+  Bio::GeneDesign::Basic: 0
+  Bio::Seq: 0
+  Bio::SeqIO: 0
+  Config::Auto: 0.38
+  DBI: 1.616
+  Digest::MD5: 2.51
+  Perl6::Slurp: 0.03
+  Text::Diff: 1.3
+  Text::Wrap: 2009.0305
+  Time::Format: 1.11
+  URI::Escape: 1.59
+  perl: 5.006
+resources:
+  license: http://opensource.org/licenses/bsd-license.php
+version: 1.02

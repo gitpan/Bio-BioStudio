@@ -1,0 +1,18 @@
+Build.PL
+Changes
+lib/Bio/BioStudio/Basic.pm
+lib/Bio/BioStudio/BLAST.pm
+lib/Bio/BioStudio/Diff.pm
+lib/Bio/BioStudio/Foswiki.pm
+lib/Bio/BioStudio/GBrowse.pm
+lib/Bio/BioStudio/GFF3.pm
+lib/Bio/BioStudio/MySQL.pm
+MANIFEST			This list of files
+README
+t/00-load.t
+t/manifest.t
+t/pod-coverage.t
+t/pod.t
+Makefile.PL
+META.yml
+META.json
