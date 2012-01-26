@@ -12,6 +12,7 @@ WriteMakefile
                    'Perl6::Slurp' => '0.03',
                    'URI::Escape' => '1.59',
                    'Bio::GeneDesign::Basic' => 0,
+                   'Cairo' => '1.09',
                    'Bio::SeqIO' => 0,
                    'Text::Diff' => '1.3',
                    'Test::More' => 0,

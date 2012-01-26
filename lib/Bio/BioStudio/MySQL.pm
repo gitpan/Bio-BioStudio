@@ -10,7 +10,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.00';
+$VERSION = '1.03';
 
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(  
@@ -107,7 +107,7 @@ BioStudio::MySQL
 
 =head1 VERSION
 
-Version 1.00
+Version 1.03
 
 =head1 DESCRIPTION
 

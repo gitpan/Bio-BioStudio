@@ -13,7 +13,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.00';
+$VERSION = '1.03';
 
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(
@@ -397,7 +397,7 @@ BioStudio::Basic - basic functions for the BioStudio synthetic biology framework
  
 =head1 VERSION
 
-Version 1.00
+Version 1.03
 
 =head1 DESCRIPTION
 

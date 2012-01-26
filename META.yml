@@ -19,27 +19,31 @@ provides:
     version: 1.00
   Bio::BioStudio::Basic:
     file: lib/Bio/BioStudio/Basic.pm
-    version: 1.00
+    version: 1.03
+  Bio::BioStudio::Cairo:
+    file: lib/Bio/BioStudio/Cairo.pm
+    version: 1.03
   Bio::BioStudio::Diff:
     file: lib/Bio/BioStudio/Diff.pm
-    version: 1.00
+    version: 1.03
   Bio::BioStudio::Foswiki:
     file: lib/Bio/BioStudio/Foswiki.pm
     version: 1.00
   Bio::BioStudio::GBrowse:
     file: lib/Bio/BioStudio/GBrowse.pm
-    version: 1.02
+    version: 1.03
   Bio::BioStudio::GFF3:
     file: lib/Bio/BioStudio/GFF3.pm
-    version: 1.00
+    version: 1.03
   Bio::BioStudio::MySQL:
     file: lib/Bio/BioStudio/MySQL.pm
-    version: 1.00
+    version: 1.03
 requires:
   Bio::DB::SeqFeature::Store: 0
   Bio::GeneDesign::Basic: 0
   Bio::Seq: 0
   Bio::SeqIO: 0
+  Cairo: 1.09
   Config::Auto: 0.38
   DBI: 1.616
   Digest::MD5: 2.51
@@ -51,4 +55,4 @@ requires:
   perl: 5.006
 resources:
   license: http://opensource.org/licenses/bsd-license.php
-version: 1.02
+version: 1.03

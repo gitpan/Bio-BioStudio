@@ -11,7 +11,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.02';
+$VERSION = '1.03';
 
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(
@@ -148,7 +148,7 @@ BioStudio::GBrowse
 
 =head1 VERSION
 
-Version 1.00
+Version 1.03
 
 =head1 DESCRIPTION
 
@@ -182,6 +182,9 @@ BioStudio functions for GBrowse
 =head2 rollback_gbrowse()
   Given a BioStudio config hashref and a BioStudio parameter hashref, remove
   a source from GBrowse. 
+
+=head2 gbrowse_gene_names()
+  Creates links to the gbrowse installation for genes
 
 =head1 AUTHOR
 
