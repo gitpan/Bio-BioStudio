@@ -16,33 +16,53 @@ name: Bio-BioStudio
 provides:
   Bio::BioStudio::BLAST:
     file: lib/Bio/BioStudio/BLAST.pm
-    version: 1.00
+    version: 1.04
   Bio::BioStudio::Basic:
     file: lib/Bio/BioStudio/Basic.pm
-    version: 1.03
+    version: 1.04
   Bio::BioStudio::Cairo:
     file: lib/Bio/BioStudio/Cairo.pm
-    version: 1.03
+    version: 1.04
+  Bio::BioStudio::Chunk:
+    file: lib/Bio/BioStudio/Chunk.pm
+    version: 1.04
   Bio::BioStudio::Diff:
     file: lib/Bio/BioStudio/Diff.pm
-    version: 1.03
+    version: 1.04
+  Bio::BioStudio::Diff::Difference:
+    file: lib/Bio/BioStudio/Diff/Difference.pm
+    version: 0
+  Bio::BioStudio::Diff::Factory:
+    file: lib/Bio/BioStudio/Diff/Factory.pm
+    version: 0
   Bio::BioStudio::Foswiki:
     file: lib/Bio/BioStudio/Foswiki.pm
-    version: 1.00
+    version: 1.04
   Bio::BioStudio::GBrowse:
     file: lib/Bio/BioStudio/GBrowse.pm
-    version: 1.03
+    version: 1.04
   Bio::BioStudio::GFF3:
     file: lib/Bio/BioStudio/GFF3.pm
-    version: 1.03
+    version: 1.04
+  Bio::BioStudio::Marker:
+    file: lib/Bio/BioStudio/Marker.pm
+    version: 1.04
+  Bio::BioStudio::Megachunk:
+    file: lib/Bio/BioStudio/Megachunk.pm
+    version: 1.04
   Bio::BioStudio::MySQL:
     file: lib/Bio/BioStudio/MySQL.pm
-    version: 1.03
+    version: 1.04
+  Bio::BioStudio::RestrictionEnzyme:
+    file: lib/Bio/BioStudio/RestrictionEnzyme.pm
+    version: 1.04
+  Bio::BioStudio::RestrictionEnzyme::Store:
+    file: lib/Bio/BioStudio/RestrictionEnzyme/Store.pm
+    version: 1.04
 requires:
-  Bio::DB::SeqFeature::Store: 0
   Bio::GeneDesign::Basic: 0
-  Bio::Seq: 0
-  Bio::SeqIO: 0
+  Bio::Root::Root: 0
+  Bio::Tools::Run::StandAloneBlastPlus: 0
   Cairo: 1.09
   Config::Auto: 0.38
   DBI: 1.616
@@ -55,4 +75,4 @@ requires:
   perl: 5.006
 resources:
   license: http://opensource.org/licenses/bsd-license.php
-version: 1.03
+version: 1.04

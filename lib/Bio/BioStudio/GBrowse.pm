@@ -1,3 +1,26 @@
+#
+# BioStudio functions for GBrowse interaction
+#
+# POD documentation - main docs before the code
+
+=head1 NAME
+
+Bio::BioStudio::GBrowse - GBrowse interaction
+
+=head1 VERSION
+
+Version 1.04
+
+=head1 DESCRIPTION
+
+BioStudio functions for GBrowse
+
+=head1 AUTHOR
+
+Sarah Richardson <notadoctor@jhu.edu>.
+
+=cut
+
 package Bio::BioStudio::GBrowse;
 require Exporter;
 
@@ -11,7 +34,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.03';
+$VERSION = '1.04';
 
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(
@@ -22,23 +45,27 @@ $VERSION = '1.03';
   make_link
   gbrowse_gene_names
 );
-%EXPORT_TAGS = (all => [qw(write_conf_file rollback_gbrowse 
-  update_gbrowse get_gbrowse_src_list make_link gbrowse_gene_names)]);
-  
-################################################################################
-############################## GBrowse  Functions ##############################
-################################################################################
+%EXPORT_TAGS = (all => \@EXPORT_OK);
+ 
+=head1 Functions
+
+=head2 gbrowse_gene_names()
+
+  Creates links to the gbrowse installation for genes
+
+=cut
+
 sub gbrowse_gene_names
 {
   my ($genelist, $pa, $BS) = @_;
   my $DISPLAY = {};
   my ($pre, $prep, $post) = ("<code style=\"color:", ";\">", "</code>");
   foreach my $gene (@$genelist)
-  { 
+  {
     my $essstatus = $gene->Tag_essential_status;
     my $orfstatus = $gene->Tag_orf_classification;
-    my $displayname = $gene->has_tag("gene")  
-                  ?  $gene->Tag_load_id . " (" . $gene->Tag_gene . ")"  
+    my $displayname = $gene->has_tag("gene") 
+                  ?  $gene->Tag_load_id . " (" . $gene->Tag_gene . ")" 
                   :  $gene->Tag_load_id;
     my $fulldisplay;
     if ($essstatus ne "Nonessential")
@@ -54,6 +81,14 @@ sub gbrowse_gene_names
   return $DISPLAY;
 }
 
+=head2 make_link()
+
+  Given a list of Bio::SeqFeature gene objects, a BioStudio parameter hashref,
+  and the BioStudio config hashref, generate a hashref such that the key is the
+  gene's id and the value is a display friendly link to GBrowse.
+
+=cut
+
 sub make_link
 {
   my ($feat, $desc, $pa, $BS) = @_;
@@ -61,6 +96,13 @@ sub make_link
   my $href = "http://$BS->{this_server}/cgi-bin/gb2/gbrowse/$chr/?start=" . $feat->start . ";stop=" . $feat->end . ";ref=" . $pa->{SEQID} . ";";
   return "<a href=\"$href\" target=\"_blank\" style=\"text-decoration:none\">$desc</a>";
 }
+
+=head2 get_gbrowse_src_list()
+
+  Given the BioStudio config hashref, return a list of all of the chromosomes
+  that are available through GBrowse
+
+=cut
 
 sub get_gbrowse_src_list
 {
@@ -75,6 +117,14 @@ sub get_gbrowse_src_list
   }
 	return @sources;
 }
+
+=head2 write_conf_file()
+
+  Given the BioStudio config hashref, the name of the chromosome, and a note,
+  create a configuration file by replacing values in the BioStudio template
+  of a GBrowse conf file.
+
+=cut
 
 sub write_conf_file
 {
@@ -97,7 +147,7 @@ sub write_conf_file
 	print $confout $ref;
 	close $confout;
   my $confstream = slurp($BS->{GBrowse_conf_file});
-  if ($confstream !~ /$newgffname/)
+  if ($confstream !~ /\[$newgffname\]/)
   {
     open (my $gbout, ">>", $BS->{GBrowse_conf_file}) || die "can't open GBrowse conf file $BS->{GBrowse_conf_file} : $!";
     print $gbout "\n[$newgffname]\n";
@@ -108,6 +158,13 @@ sub write_conf_file
 	return;	
 }
 
+=head2 update_gbrowse()
+
+  Given a BioStudio config hashref and a BioStudio parameter hashref, update
+  GBrowse - reload the database, write the configuration file, and pass a link.
+
+=cut
+
 sub update_gbrowse
 {
 	my ($BS, $pa) = @_;
@@ -117,18 +174,25 @@ sub update_gbrowse
 	
 	print "Creating new conf file...\n\n\n";
   write_conf_file($BS, $pa->{NEWCHROMOSOME}, "$pa->{NEWCHROMOSOME} created from $pa->{OLDCHROMOSOME} $time{'yymmdd'}", $pa->{SEQID});
-    
+   
   my $newlink = "http://" . $BS->{"this_server"} . "/cgi-bin/gb2/gbrowse/$pa->{NEWCHROMOSOME}/";
 	print "The new chromosome is <a href=\"$newlink\">$pa->{NEWCHROMOSOME}</a>.\n\n\n";
 	return;
 }
+
+=head2 rollback_gbrowse()
+
+  Given a BioStudio config hashref and a BioStudio parameter hashref, remove
+  a source from GBrowse.
+
+=cut
 
 sub rollback_gbrowse
 {
   my ($BS, $pa) = @_;
 		
 	print "Deleting conf file...";
-	system "rm $BS->{conf_repository}/$pa->{DROPPER}.conf" == 0 
+	system "rm $BS->{conf_repository}/$pa->{DROPPER}.conf" == 0
 	  || print "can't delete conf file!";
   my $GBconf = $BS->{GBrowse_conf_file};
   my $GBconftmp = $BS->{GBrowse_conf_file} . ".tmp";
@@ -141,54 +205,6 @@ sub rollback_gbrowse
 
 1;
 __END__
-
-=head1 NAME
-
-BioStudio::GBrowse
-
-=head1 VERSION
-
-Version 1.03
-
-=head1 DESCRIPTION
-
-BioStudio functions for GBrowse
-
-=head1 Functions
-
-=head2 make_link()
-  Given a list of Bio::SeqFeature gene objects, a BioStudio parameter hashref,
-  and the BioStudio config hashref, generate a hashref such that the key is the
-  gene's id and the value is a display friendly link to GBrowse.
-
-=head2 make_link()
-  Given a Bio::SeqFeature compliant object, a string description, a BioStudio
-  parameter hashref, and a BioStudio config hashref, generate a link for that 
-  object in GBrowse.
-
-=head2 get_gbrowse_src_list()
-  Given the BioStudio config hashref, return a list of all of the chromosomes
-  that are available through GBrowse
-
-=head2 write_conf_file()
-  Given the BioStudio config hashref, the name of the chromosome, and a note, 
-  create a configuration file by replacing values in the BioStudio template
-  of a GBrowse conf file.
-
-=head2 update_gbrowse()
-  Given a BioStudio config hashref and a BioStudio parameter hashref, update 
-  GBrowse - reload the database, write the configuration file, and pass a link.
-
-=head2 rollback_gbrowse()
-  Given a BioStudio config hashref and a BioStudio parameter hashref, remove
-  a source from GBrowse. 
-
-=head2 gbrowse_gene_names()
-  Creates links to the gbrowse installation for genes
-
-=head1 AUTHOR
-
-Sarah Richardson <notadoctor@jhu.edu>.
 
 =head1 COPYRIGHT AND LICENSE
 

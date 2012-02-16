@@ -1,3 +1,26 @@
+#
+# BioStudio module for Foswiki interaction
+#
+# POD documentation - main docs before the code
+
+=head1 NAME
+
+Bio::BioStudio::Foswiki
+
+=head1 VERSION
+
+Version 1.04
+
+=head1 DESCRIPTION
+
+BioStudio functions for Foswiki interaction
+
+=head1 AUTHOR
+
+Sarah Richardson <notadoctor@jhu.edu>.
+
+=cut
+
 package Bio::BioStudio::Foswiki;
 require Exporter;
 
@@ -7,7 +30,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.00';
+$VERSION = '1.04';
 
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(
@@ -15,16 +38,16 @@ $VERSION = '1.00';
   make_new_web
   update_wiki
   wiki_edit_prep
-  wiki_update_feature 
+  wiki_update_feature
   wiki_add_feature
 );
-%EXPORT_TAGS = (all => [qw(make_new_topic make_new_web update_wiki 
-  wiki_edit_prep wiki_update_feature wiki_add_feature)]);
+%EXPORT_TAGS = (all => \@EXPORT_OK);
 
+=head1 Functions
 
-################################################################################
-############################## Foswiki Functions ###############################
-################################################################################
+=head2 wiki_edit_prep
+
+=cut
 
 sub wiki_edit_prep
 {
@@ -40,18 +63,21 @@ sub wiki_edit_prep
     substr($name, 0, 1) = uc substr($name, 0, 1);
     my $path = $pa->{CHRPATH} . "/" . $name . ".txt";
     make_new_topic($path, "Features", 1, [], $BS) unless (-e $path);
-    $pa->{PARENTS}->{$feattype} = $name;   
+    $pa->{PARENTS}->{$feattype} = $name;  
   }
   $pa->{WIKICOMMENTS} = [];
   return;
 }
 
+=head2 wiki_add_feature
+
+=cut
 
 sub wiki_add_feature
 {
   my ($pa, $BS, $feat, $buds) = @_;
   my $path = $pa->{CHRPATH} . "/" . $feat->Tag_load_id . ".txt";
-  my @arr = ($pa->{AUTHSTR}); 
+  my @arr = ($pa->{AUTHSTR});
   if ($BS->{enable_gbrowse})
   {
     my $text = "See this feature in GBrowse ($pa->{NEWCHROMOSOME})";
@@ -65,20 +91,23 @@ sub wiki_add_feature
   foreach my $bud (%$buds)
   {
     push @arr, "$bud: [[" . $buds->{$bud}->Tag_load_id . "]]<br>";
-  } 
+  }
   my $type = $feat->primary_tag();
   make_new_topic($path, $pa->{PARENTS}->{$type}, 0, \@arr, $BS);
   return;
 }
 
+=head2 wiki_update_feature
+
+=cut
 
 sub wiki_update_feature
 {
   my ($pa, $BS, $feat, $add, $flag1, $note, $flag2) = @_;
   my $path = $pa->{CHRPATH} . "/" . $feat->Tag_load_id . ".txt";
-  my $text = $flag2  
+  my $text = $flag2 
             ? "See this feature in GBrowse ($pa->{OLDCHROMOSOME})"
-            : "See this feature in GBrowse ($pa->{NEWCHROMOSOME})";  
+            : "See this feature in GBrowse ($pa->{NEWCHROMOSOME})"; 
   open (my $WH, ">>$path") || die ("CAN'T WORK ON WIKI!");
   if ($flag1)
   {
@@ -94,6 +123,9 @@ sub wiki_update_feature
   return;
 }
 
+=head2 update_wiki
+
+=cut
 
 sub update_wiki
 {
@@ -110,8 +142,11 @@ sub update_wiki
   make_new_topic($VERPATH, "Versions", 0, \@arr, $BS);
 }
 
+=head2 make_new_web
 
-sub make_new_web 
+=cut
+
+sub make_new_web
 {
   my ($webpath, $linkreplace, $BS) = @_;
   my $now = time;
@@ -138,6 +173,9 @@ sub make_new_web
   }
 }
 
+=head2 make_new_topic
+
+=cut
 
 sub make_new_topic
 {
@@ -158,37 +196,8 @@ sub make_new_topic
 }
 
 1;
+
 __END__
-
-=head1 NAME
-
-BioStudio::Foswiki
-
-=head1 VERSION
-
-Version 1.00
-
-=head1 DESCRIPTION
-
-BioStudio functions for Foswiki interaction
-
-=head1 FUNCTIONS
-
-=head2 wiki_edit_prep()
-
-=head2 wiki_add_feature()
-
-=head2 wiki_update_feature()
-
-=head2 update_wiki()
-
-=head2 make_new_web()
-
-=head2 make_new_topic()
-
-=head1 AUTHOR
-
-Sarah Richardson <notadoctor@jhu.edu>.
 
 =head1 COPYRIGHT AND LICENSE
 

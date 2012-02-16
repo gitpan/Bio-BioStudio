@@ -13,4 +13,4 @@ BEGIN {
     use_ok( 'Bio::BioStudio::Cairo' ) || print "Bail out!\n";
 }
 
-diag( "Testing Bio::BioStudio::Basic $Bio::BioStudio::Basic::VERSION, Perl $], $^X" );
+diag( "Testing Bio::BioStudio $Bio::BioStudio::Basic::VERSION, Perl $], $^X" );

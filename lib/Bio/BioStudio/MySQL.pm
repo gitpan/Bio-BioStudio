@@ -1,7 +1,31 @@
+#
+# BioStudio module for MySQL database interactions
+#
+# POD documentation - main docs before the code
+
+=head1 NAME
+
+Bio::BioStudio::MySQL
+
+=head1 VERSION
+
+Version 1.04
+
+=head1 DESCRIPTION
+
+BioStudio functions for MySQL interaction.
+
+=head1 AUTHOR
+
+Sarah Richardson <notadoctor@jhu.edu>.
+
+=cut
+
 package Bio::BioStudio::MySQL;
 require Exporter;
 
 use Bio::BioStudio::Basic qw($VERNAME);
+use Bio::BioStudio::RestrictionEnzyme;
 use DBI;
 use Carp;
 use Bio::DB::SeqFeature::Store;
@@ -10,46 +34,59 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.03';
+$VERSION = '1.04';
 
 @ISA = qw(Exporter);
-@EXPORT_OK = qw(  
+@EXPORT_OK = qw( 
   drop_database
   list_databases
   create_database
   load_database
   fetch_database
+  db_execute
 );
-%EXPORT_TAGS = (all => [qw(drop_database list_databases create_database 
-  load_database fetch_database)]);
+%EXPORT_TAGS = (all => \@EXPORT_OK);
 
-################################################################################
-##################### MySQL Database Interaction Functions #####################
-################################################################################
+=head2 list_databases
+
+  Arguments : BioStudio configuration hashref
+  Returns : a hash containing all BioStudio database names as keys
+
+=cut
 
 sub list_databases
 {
 	my ($BS) = @_;
-	my $dbh = DBI->connect('dbi:mysql:mysql', $BS->{mysql_user}, $BS->{mysql_pass}, 
+	my $dbh = DBI->connect('dbi:mysql:mysql', $BS->{mysql_user}, $BS->{mysql_pass},
 	  { RaiseError => 1, AutoCommit => 1});
 	my %dblist;
-	my $sth = $dbh->prepare(q{SHOW DATABASES}) 
+	my $sth = $dbh->prepare(q{SHOW DATABASES})
 	  or croak "Unable to prepare show databases: ". $dbh->errstr."\n";
 	$sth->execute or croak "Unable to exec show databases: ". $dbh->errstr."\n";
 	my $aref;
-	while ($aref = $sth->fetchrow_arrayref) 
+	while ($aref = $sth->fetchrow_arrayref)
 	{	
 		$dblist{$aref->[0]}++;
-	} 
+	}
 	$sth->finish;
 	$dbh->disconnect();
 	return \%dblist;
 }
 
+=head2 create_database
+
+  Arguments : Chromsome name as string, BioStudio configuration hashref
+  Function : Creates a MySQL database that is ready to be loaded with chromosome
+             data. It does NOT load that database.
+
+=cut
+
 sub create_database
 {
 	my ($chrname, $BS) = @_;
-	my $dbh = DBI->connect('dbi:mysql:mysql', $BS->{mysql_user}, $BS->{mysql_pass}, 
+	my $dbh = DBI->connect('dbi:mysql:mysql', 
+	  $BS->{mysql_user}, 
+	  $BS->{mysql_pass},
 	  { RaiseError => 1, AutoCommit => 1});
 	$dbh->do("create database $chrname;");
 	$dbh->do("grant select on $chrname.* to nobody\@localhost;");
@@ -57,6 +94,20 @@ sub create_database
 	$dbh->disconnect();
 	return;
 }
+
+=head2 load_database
+
+  Arguments: Database/chromosome name as string, BioStudio configuration hashref
+             and optionally, the name of an alternate chromosome to be loaded
+             using the database name provided in the first argument
+  Function : This function loads a MySQL database (which must have been
+             previously created, see create_database()) with a GFF file. The
+             file is the one corresponding to the first argument provided
+             unless the alternate is defined, in which case the file
+             corresponding to the third argument is loaded into a database
+             named after the first argument.
+
+=cut
 
 sub load_database
 {
@@ -72,6 +123,18 @@ sub load_database
 	return;
 }
 
+=head2 fetch_database
+
+  Arguments: Database/chromosome name, BioStudio configuration hashref
+             and optionally, a write flag
+  Returns: A L<Bio::DB::SeqFeature::Store> object.
+  Function: Fetches a Bio::DB::SeqFeature::Store interface for a MySQL database
+            containing the annotations of the argument chromosome. An optional
+            write flag sets whether or not the interface will support adding,
+            deleting, or modifying features.
+
+=cut
+
 sub fetch_database
 {
   my ($chrname, $BS, $write) = @_;
@@ -86,10 +149,19 @@ sub fetch_database
   return $db;
 }
 
+=head2 drop_database
+
+  Arguments: Database/chromosome name, BioStudio configuration hashref
+  Function: Deletes the MySQL database containing the chromosome.
+
+=cut
+
 sub drop_database
 {
 	my ($chrname, $BS) = @_;
-	my $dbh = DBI->connect('dbi:mysql:mysql', $BS->{mysql_user}, $BS->{mysql_pass}, 
+	my $dbh = DBI->connect('dbi:mysql:mysql', 
+	  $BS->{mysql_user}, 
+	  $BS->{mysql_pass},
 	  { RaiseError => 1, AutoCommit => 1});
 	$dbh->do("drop database $chrname;");
 	$dbh->do("flush privileges;");
@@ -97,58 +169,33 @@ sub drop_database
 	return;
 }
 
+=head2 db_execute
+
+  Execute an arbitrary command on an arbitrary database
+  
+=cut
+
+sub db_execute
+{
+  my ($dbname, $command, $BS) = @_;
+  my $dbh = DBI->connect("dbi:mysql:$dbname", 
+        $BS->{mysql_user},
+        $BS->{mysql_pass}, 
+        { RaiseError => 1, AutoCommit => 1});
+  $dbh->{'mysql_auto_reconnect'} = 1;
+  my $sth = $dbh->prepare($command) or die ($dbh->errstr . "\n");
+  $sth->execute or die ($dbh->errstr . "\n");
+  $sth->finish;
+  $dbh->disconnect();
+}
 
 1;
+
 __END__
-
-=head1 NAME
-
-BioStudio::MySQL
-
-=head1 VERSION
-
-Version 1.03
-
-=head1 DESCRIPTION
-
-BioStudio functions for MySQL interaction.
-
-=head1 FUNCTIONS
-
-=head2 list_databases()
-  Given the BioStudio config hashref, return a hashref where the keys are all
-  chromosomes available in the MySQL database.
-
-=head2 create_database()
-  Given a chromosome name and the BioStudio config hashref, create a mysql 
-  database to store the chromosome in MySQL. This function does not load the
-  database!
-
-=head2 load_database()
-  Given a chromosome name, the BioStudio config hashref, and optionally, the
-  name of an alternate chromosome, this function loads a MySQL database (which
-  must have been previously created, see create_database()) with a GFF file. The
-  file is the one corresponding to the first chromosome provided unless the
-  alternate is defined, in which case the alternate is loaded into a database
-  named after the first chromosome.
-
-=head2 fetch_database()
-  Given a chromosome name and the BioStudio config hashref, returns a 
-  Bio::DB::SeqFeature::Store interface for the MySQL database containing the 
-  chromosome. An optional write flag sets whether or not the interface will 
-  support adding, deleting, or modifying features
-
-=head2 drop_database()
-  Given a chromosome name and the BioStudio config hashref, deletes the MySQL
-  database containing the chromosome.
-
-=head1 AUTHOR
-
-Sarah Richardson <notadoctor@jhu.edu>.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2011, BioStudio developers
+Copyright (c) 2012, BioStudio developers
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

@@ -1,3 +1,26 @@
+#
+# BioStudio functions for GFF3 interaction
+#
+# POD documentation - main docs before the code
+
+=head1 NAME
+
+Bio::BioStudio::GFF3 - GFF3 interaction
+
+=head1 VERSION
+
+Version 1.04
+
+=head1 DESCRIPTION
+
+BioStudio functions for GFF3
+
+=head1 AUTHOR
+
+Sarah Richardson <notadoctor@jhu.edu>.
+
+=cut
+
 package Bio::BioStudio::GFF3;
 require Exporter;
 
@@ -10,23 +33,27 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.03';
+$VERSION = '1.04';
 
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(
-  get_GFF_comments 
+  get_GFF_comments
   make_GFF3
   gff3_string
-  
+ 
 );
-%EXPORT_TAGS = (all => [qw(get_GFF_comments make_GFF3 gff3_string)]);
-  
+%EXPORT_TAGS = (all => \@EXPORT_OK);
+ 
 my %PHASES = (0 => 1, 1 => 1, 2 => 1);
 my $COMMENT			=	qr/^\#/;
 
-################################################################################
-################################ GFF3 Functions ################################
-################################################################################
+=head1 Functions
+
+=head2 get_GFF_comments()
+  Given a chromosome name and the BioStudio config hashref, returns an arrayref
+  containing all of the comments and directives from a GFF3 file.
+
+=cut
 
 sub get_GFF_comments
 {
@@ -40,11 +67,17 @@ sub get_GFF_comments
 	return \@comments;
 }
 
+=head2 gff3_string()
+
+  Bio::DB::SeqFeature no gff3_out
+
+=cut
+
 sub gff3_string
 {
   my ($feat) = @_;
-  my ($seqid, $source, $type, $start, $end, $score, $strand, $phase) = 
-  ($feat->seq_id(), $feat->source_tag(), $feat->primary_tag(), $feat->start(), 
+  my ($seqid, $source, $type, $start, $end, $score, $strand, $phase) =
+  ($feat->seq_id(), $feat->source_tag(), $feat->primary_tag(), $feat->start(),
    $feat->end(), $feat->score(), $feat->strand(), $feat->phase());
   $score = $score ? $score  : ".";
   $phase = $phase && exists($PHASES{$phase}) ? $phase  : ".";
@@ -79,11 +112,15 @@ sub gff3_string
   return $string;
 }
 
+=head2 make_GFF3
+
+=cut
+
 sub make_GFF3
 {
   my ($pa, $BS, $newcomments) = @_;
   my @NEWGFF;
-  
+ 
   #comments
   my $gffheader = shift @{$pa->{COMMENTS}};
   push @NEWGFF, $gffheader, @$newcomments, @{$pa->{COMMENTS}};
@@ -91,7 +128,7 @@ sub make_GFF3
   #features
   my $seq_stream = $pa->{DB}->get_seq_stream()  or die "failed to get_seq_stream()";
   my @featarr;
-  while (my $seq = $seq_stream->next_seq) 
+  while (my $seq = $seq_stream->next_seq)
   {
     push @featarr, $seq;
   }
@@ -100,45 +137,17 @@ sub make_GFF3
 
   #sequence
   push @NEWGFF, @{print_as_fasta($pa->{EDITCHR}, $pa->{SEQID})};
-  
+ 
 	local $| = 1;
   open (OUT, ">$pa->{NEWFILE}") || die "can't open test output, $pa->{NEWFILE} $!\n";
   print OUT @NEWGFF;
-	close OUT; 
+	close OUT;
   return;
 }
 
 1;
 
 __END__
-
-=head1 NAME
-
-BioStudio::GFF3
-
-=head1 VERSION
-
-Version 1.03
-
-=head1 DESCRIPTION
-
-BioStudio functions for parsing and creating GFF3 files
-
-=head1 Functions
-
-=head2 get_GFF_comments()
-  Given a chromosome name and the BioStudio config hashref, returns an arrayref
-  containing all of the comments and directives from a GFF3 file.
-
-=head2 gff3_string()
-
-  Stupid Bioperl stupid Bio::DB::SeqFeature stupid no gff3_out
-
-=head2 make_GFF3
-
-=head1 AUTHOR
-
-Sarah Richardson <notadoctor@jhu.edu>.
 
 =head1 COPYRIGHT AND LICENSE
 

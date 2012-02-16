@@ -10,18 +10,17 @@ WriteMakefile
   'VERSION_FROM' => 'lib/Bio/BioStudio.pm',
   'PREREQ_PM' => {
                    'Perl6::Slurp' => '0.03',
+                   'Bio::Root::Root' => 0,
                    'URI::Escape' => '1.59',
                    'Bio::GeneDesign::Basic' => 0,
                    'Cairo' => '1.09',
-                   'Bio::SeqIO' => 0,
+                   'Bio::Tools::Run::StandAloneBlastPlus' => 0,
                    'Text::Diff' => '1.3',
                    'Test::More' => 0,
-                   'Bio::Seq' => 0,
                    'Time::Format' => '1.11',
                    'Text::Wrap' => '2009.0305',
                    'Digest::MD5' => '2.51',
                    'Config::Auto' => '0.38',
-                   'Bio::DB::SeqFeature::Store' => 0,
                    'DBI' => '1.616'
                  }
 )

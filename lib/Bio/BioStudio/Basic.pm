@@ -1,7 +1,31 @@
+#
+# Basic BioStudio functions
+#
+# POD documentation - main docs before the code
+
+=head1 NAME
+
+BioStudio::Basic - basic functions for the BioStudio synthetic biology framework
+
+=head1 VERSION
+
+Version 1.04
+
+=head1 DESCRIPTION
+
+Basic BioStudio functions
+
+=head1 AUTHOR
+
+Sarah Richardson <notadoctor@jhu.edu>.
+
+=cut
+
 package Bio::BioStudio::Basic;
 require Exporter;
 
 use Bio::GeneDesign::Basic qw(:all);
+use Bio::BioStudio::Marker;
 use Bio::GeneDesign::Codons qw(translate amb_translation);
 use File::Find;
 use Text::Wrap qw($columns &wrap);
@@ -13,7 +37,7 @@ use strict;
 use warnings;
 
 use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.03';
+$VERSION = '1.04';
 
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(
@@ -36,25 +60,21 @@ $VERSION = '1.03';
   print_as_fasta
   rollback
   $VERNAME
-  %SPECIES
 );
-%EXPORT_TAGS = (all => [qw(configure_BioStudio fetch_custom_features 
-  fetch_custom_markers fetch_enzyme_lists make_mask mask_combine mask_filter 
-  get_src_path get_genome_list gather_versions ORF_compile get_feature_sequence 
-  check_new_sequence flatten_subfeats gene_names allowable_codon_changes 
-  print_as_fasta rollback $VERNAME %SPECIES)]);
+%EXPORT_TAGS = (all => \@EXPORT_OK);
 
-our $VERNAME		=	qr/([\w]+)_chr([\w\d]+)_(\d+)_(\d+)/;
+our $VERNAME		=	qr/([\w]+)_chr([\w\d]+)_(\d+)_(\d+)/;      
 
-our %SPECIES		= ("yeast" => 1, 
-                   "ecoli" => 2, 
-                   "bsubtilis" => 6, 
-                   "dradiodurans" => 7, 
-                   "mgenitalium" => 8);         
+=head1 Customization functions
 
-################################################################################
-########################### Customization  Functions ###########################
-################################################################################
+=head2 configure_BioStudio()
+
+  This function loads the configuration file into a hash ref. You must pass it
+  the path to the directory containing the configuration file; it will use
+  Config::Auto to ``magically'' parse the file. 
+
+=cut
+
 sub configure_BioStudio
 {
 	my ($conf_dir) = @_;
@@ -79,9 +99,17 @@ sub configure_BioStudio
     my @temp = split(/\./, $prefeat);
     my $feat = $temp[0];
     $BS->{COLOR}->{$feat} = $BS->{$prefeat};
-  }    
+  }
   return $BS;
 }
+
+=head2 fetch_custom_features()
+
+  Pass the config hashref, receive a hashref of the custom features defined in
+  the BioStudio configuration directory. Each feature has four attributes: NAME,
+  KIND, SOURCE, and SEQ
+
+=cut
 
 sub fetch_custom_features
 {
@@ -101,38 +129,44 @@ sub fetch_custom_features
   return \%BS_FEATURES;
 }
 
+=head2 fetch_custom_markers()
+
+  Pass the config hashref, receive a hashref of the custom markers defined in
+  the BioStudio configuration directory. Each key in the hashref is a marker
+  name, each value in the hashref is a L<Bio::BioStudio::Marker> object.
+
+=cut
+
 sub fetch_custom_markers
 {
   my ($BS) = @_;
   opendir(DIR, $BS->{marker_dir});
-  my @markers = readdir(DIR);
+  my @markers = grep {$_ =~ /\.gff\Z/} readdir(DIR);
   closedir DIR;
-  @markers = grep {$_ =~ /\.gff\Z/} @markers;
   my %markers;
   foreach my $marker (@markers)
   {
     my $name = $1 if ($marker =~/([\w\d]+)\.gff\Z/);
-    my $markerdb = Bio::DB::SeqFeature::Store->new(
-      -adaptor => 'memory',
-      -gff     => "$BS->{marker_dir}/$marker",
-      -index_subfeatures => "true");
-    my @alls = $markerdb->get_features_by_type("region");
-    my $all = $alls[0];
-    my @CDSes = $markerdb->get_features_by_type("CDS");
-    my $seqid = $CDSes[0]->seq_id;
-    my $region = $markerdb->fetch_sequence($seqid);
-    my $newmarker = {};
-    $newmarker->{NAME} = $name;
-    $newmarker->{SEQ} = $region;
-    $newmarker->{DB} = $markerdb;
-    if ($all->has_tag("color"))
-    {
-      $newmarker->{COLOR} = "#" . join("", $all->get_tag_values("color"));
-    }
-    $markers{$name} = $newmarker;
+    my $db = Bio::DB::SeqFeature::Store->new(
+                  -adaptor => 'memory',
+                  -gff     => "$BS->{marker_dir}/$marker",
+                  -index_subfeatures => "true"
+    );
+    $markers{$name} = Bio::BioStudio::Marker->new(
+                          -name => $name,
+                          -db => $db
+    );
   }
   return \%markers;
 }
+
+=head2 fetch_enzyme_lists()
+
+  Pass the config hashref, receive an array that contains the names of the
+  enzyme lists in the BioStudio configuration directory. Each list is a
+  GeneDesign compatible list of restriction enzyme recognition sites.
+
+=cut
 
 sub fetch_enzyme_lists
 {
@@ -144,10 +178,18 @@ sub fetch_enzyme_lists
   return @lists;
 }
 
+=head1 Masking functions
 
-################################################################################
-############################## Masking  Functions ##############################
-################################################################################
+=head2 make_mask()
+
+  Given a length, a reference to a list full of Bio::SeqFeatures, and optionally
+  an offset, returns a string of integers where each positon corresponds to a
+  base of sequence, and the integer represents the number of features that
+  overlap that base. Obviously limited to ten overlapping features before a
+  serious bug sets in :(
+
+=cut
+
 sub make_mask
 {
 	my ($length, $featlist, $offset) = @_;
@@ -165,6 +207,13 @@ sub make_mask
 	return join("", @MASK);
 }
 
+=head2 mask_combine()
+
+  Takes two string masks (see make_mask()) and adds them. Returns the merged
+  mask.
+
+=cut
+
 sub mask_combine
 {
 	my ($mask1, $mask2) = @_;
@@ -177,6 +226,19 @@ sub mask_combine
 	return join("", @MASK);
 }
 
+=head2 mask_filter()
+
+  Takes a string mask (see make_mask()) and returns a listref of break
+  coordinates; that is, where does feature sequence end and interfeature
+  sequence begin, and where does interfeature sequence end and feature sequence
+  begin? For example, if the mask is "0001100033221100", the resulting list
+  would be [0 3 5 8 14 16], meaning that features exist from 4 to 5 and 9 to 14.
+  Intergenic sequence coordinates can thus be pulled out by hashing the array,
+  %inter = @{mask_filter($mask)} where each key + 1 is the left coordinate,
+  and the value is the right coordinate.
+
+=cut
+
 sub mask_filter
 {
 	my ($mask) = @_;
@@ -186,10 +248,15 @@ sub mask_filter
 	return $coords;
 }
 
+=head1 Genome Repository functions
 
-################################################################################
-######################### Genome Repository  Functions #########################
-################################################################################
+=head2 get_src_path()
+
+  Given a chromosome name and the config hashref, returns the absolute path to
+  that chromosome in the BioStudio genome repository.
+
+=cut
+
 sub get_src_path
 {
 	my ($chrname, $BS) = @_;
@@ -197,6 +264,13 @@ sub get_src_path
 	my $fileloc = "$BS->{genome_repository}/$species/chr$chromname/$chrname.gff";
   return $fileloc;
 }
+
+=head2 get_genome_list()
+
+  Given the config hashref, returns a list of all chromosomes in the BioStudio
+  genome repository.
+
+=cut
 
 sub get_genome_list
 {
@@ -209,8 +283,19 @@ sub get_genome_list
   {
     push @genomes, $1 if ($_ =~ /($VERNAME)/);
   }
-	return @genomes; 
+	return @genomes;
 }
+
+=head2 gather_versions()
+
+  Given a species, a target, and the config hashref, returns a hashref of all
+  chromosomes in the species in the BioStudio genome repository that match the
+  target.  The target is an integer that represents a version. 
+  If target is set to 0, we will return every wildtype version.
+  If target is set to -1, we will return every latest version.
+  For any other target (1, 3, 5) we will return that particular version.
+
+=cut
 
 sub gather_versions
 {
@@ -266,6 +351,13 @@ sub gather_versions
 	return $verhsh;
 }
 
+=head2 rollback()
+
+  Given a chromosome name and the BioStudio config hashref, removes that
+  chromosome from the BioStudio genome repository.
+
+=cut
+
 sub rollback
 {
   my ($chrname, $BS) = @_;
@@ -277,10 +369,16 @@ sub rollback
   return;
 }
 
+=head1 Editing and Markup functions
 
-################################################################################
-######################### Editing and Markup Functions #########################
-################################################################################
+=head2 ORF_compile()
+
+  given a reference to an array full of Bio::SeqFeature gene objects, returns a
+  reference to a hash with gene ids as keys and concatenated 5' to 3' coding
+  sequences as values
+
+=cut
+
 sub ORF_compile
 {
 	my ($genearr) = @_;
@@ -297,11 +395,26 @@ sub ORF_compile
 	return $final;
 }
 
+=head2 get_feature_sequence()
+
+  For when you can't use the Bio::SeqFeature seq function. Given a
+  Bio::SeqFeature compliant feature and a sequence, returns the sequence that
+  the coordinates of the feature indicate.
+
+=cut
+
 sub get_feature_sequence
 {
 	my ($feat, $seq) = @_;
 	return substr($seq, $feat->start-1, $feat->end - $feat->start + 1);
 }
+
+=head2 flatten_subfeats()
+
+  Given a seqfeature, iterate through its subfeatures and add all their subs to
+  one big array. Mainly need this when CDSes are hidden behind mRNAs in genes.
+
+=cut
 
 sub flatten_subfeats
 {
@@ -311,21 +424,38 @@ sub flatten_subfeats
   return @subs;
 }
 
+=head2 gene_names()
+
+  Given a list of Bio::SeqFeature gene objects and the BioStudio config hashref,
+  returns a hash where each gene id is the key to a display friendly string.
+
+=cut
+
 sub gene_names
 {
   my ($genelist, $BS) = @_;
   my $DISPLAY = {};
   foreach my $gene (@$genelist)
-  {    
+  {   
     my $essstatus = $gene->Tag_essential_status;
     my $orfstatus = $gene->Tag_orf_classification;
-    my $displayname = $gene->has_tag("gene")  
-                  ?  $gene->Tag_load_id . " (" . $gene->Tag_gene . ")"  
+    my $displayname = $gene->has_tag("gene") 
+                  ?  $gene->Tag_load_id . " (" . $gene->Tag_gene . ")" 
                   :  $gene->Tag_load_id;
     $DISPLAY->{$gene->Tag_load_id} = $displayname;
-  }  
+  } 
   return $DISPLAY;
 }
+
+=head2 allowable_codon_changes()
+
+  Given two codons (a from, and a to) and a GeneDesign codon table hashref, this
+  function generates every possible peptide pair that could contain the from
+  codon and checks to see if the peptide sequence can be maintained when the
+  from codon is replaced by the to codon.  This function is of particular use
+  when codons are being changed in genes that overlap one another.
+
+=cut
 
 sub allowable_codon_changes
 {
@@ -351,8 +481,8 @@ sub allowable_codon_changes
 				:	$seq2;
 			my @set1 = amb_translation($qes1, $CODON_TABLE, 1);
 			my @set2 = amb_translation($qes2, $CODON_TABLE, 1);
-			foreach my $pep (@set1, @set2) 
-			{ 
+			foreach my $pep (@set1, @set2)
+			{
 				$union{$pep}++ && $isect{$pep}++;
 			}
 			$result{$orient}->{$_}++ foreach keys %isect;
@@ -363,6 +493,14 @@ sub allowable_codon_changes
 	return \%result;
 }
 
+=head2 check_new_sequence()
+
+  Best when used as a confirmation that your edits went as expected. Given a
+  Bio::SeqFeature compliant feature that has a``newseq'' attribute, checks if
+  the newseq and the actual sequence occupied by the feature are the same
+
+=cut
+
 sub check_new_sequence
 {
   my ($feat) = @_;
@@ -370,12 +508,16 @@ sub check_new_sequence
   my $newseq = $feat->Tag_newseq;
   my $featseq = $feat->seq->seq;
   return 1 if ($newseq eq $featseq || $newseq eq complement($featseq, 1));
-  return 0;  
+  return 0; 
 }
 
-################################################################################
-########################### Miscellaneous  Functions ###########################
-################################################################################
+=head2 print_as_fasta()
+
+  takes a sequence as a string and a sequence id and returns an 80 column FASTA
+  formatted sequence block as an array reference
+
+=cut
+
 sub print_as_fasta
 {
   my ($sequence, $seqid) = @_;
@@ -390,120 +532,6 @@ sub print_as_fasta
 1;
 
 __END__
-
-=head1 NAME
-
-BioStudio::Basic - basic functions for the BioStudio synthetic biology framework
- 
-=head1 VERSION
-
-Version 1.03
-
-=head1 DESCRIPTION
-
-Basic BioStudio functions
-
-=head1 FUNCTIONS
-
-=head2 configure_BioStudio()
-  This function loads the configuration file into a hash ref. You must pass it
-  the path to the directory containing the configuration file; it will use 
-  Config::Auto to ``magically'' parse the file.  
-
-=head2 fetch_custom_features()
-  Pass the config hashref, receive a hashref of the custom features defined in
-  the BioStudio configuration directory. Each feature has four attributes: NAME,
-  KIND, SOURCE, and SEQ
-
-=head2 fetch_custom_markers()
-  Pass the config hashref, receive a hashref of the custom markers defined in
-  the BioStudio configuration directory. Each marker is a GFF file that gets
-  read into the attributes NAME, SEQ, DB (a Bio::DB::SeqFeature::Store), and 
-  COLOR (if a color is defined in the GFF file).
-
-=head2 fetch_enzyme_lists()
-  Pass the config hashref, receive an array that contains the names of the 
-  enzyme lists in the BioStudio configuration directory. Each list is a 
-  GeneDesign compatible list of restriction enzyme recognition sites.
-
-=head2 make_mask()
-  Given a length, a reference to a list full of Bio::SeqFeatures, and optionally
-  an offset, returns a string of integers where each positon corresponds to a 
-  base of sequence, and the integer represents the number of features that
-  overlap that base. Obviously limited to ten overlapping features before a
-  serious bug sets in :(
-
-=head2 mask_combine()
-  Takes two string masks (see make_mask()) and adds them. Returns the merged
-  mask.
-
-=head2 mask_filter()
-  Takes a string mask (see make_mask()) and returns a listref of break 
-  coordinates; that is, where does feature sequence end and interfeature 
-  sequence begin, and where does interfeature sequence end and feature sequence
-  begin? For example, if the mask is "0001100033221100", the resulting list 
-  would be [0 3 5 8 14 16], meaning that features exist from 4 to 5 and 9 to 14.
-  Intergenic sequence coordinates can thus be pulled out by hashing the array,
-  %inter = @{mask_filter($mask)} where each key + 1 is the left coordinate, 
-  and the value is the right coordinate.
-
-=head2 get_src_path()
-  Given a chromosome name and the config hashref, returns the absolute path to 
-  that chromosome in the BioStudio genome repository.
-
-=head2 get_genome_list()
-  Given the config hashref, returns a list of all chromosomes in the BioStudio
-  genome repository.
-
-=head2 gather_versions()
-  Given a species, a target, and the config hashref, returns a hashref of all 
-  chromosomes in the species in the BioStudio genome repository that match the 
-  target.  The target is an integer that represents a version.  
-  If target is set to 0, we will return every wildtype version.
-  If target is set to -1, we will return every latest version.
-  For any other target (1, 3, 5) we will return that particular version.
-
-=head2 rollback()
-  Given a chromosome name and the BioStudio config hashref, removes that
-  chromosome from the BioStudio genome repository.
-
-=head2 ORF_compile()
-  given a reference to an array full of Bio::SeqFeature gene objects, returns a 
-  reference to a hash with gene ids as keys and concatenated 5' to 3' coding 
-  sequences as values
-
-=head2 get_feature_sequence()
-  For when you can't use the Bio::SeqFeature seq function. Given a 
-  Bio::SeqFeature compliant feature and a sequence, returns the sequence that
-  the coordinates of the feature indicate.
-
-=head2 check_new_sequence()
-  Best when used as a confirmation that your edits went as expected. Given a 
-  Bio::SeqFeature compliant feature that has a``newseq'' attribute, checks if
-  the newseq and the actual sequence occupied by the feature are the same
-
-=head2 flatten_subfeats()
-  Given a seqfeature, iterate through its subfeatures and add all their subs to
-  one big array. Mainly need this when CDSes are hidden behind mRNAs in genes.
-
-=head2 gene_names()
-  Given a list of Bio::SeqFeature gene objects and the BioStudio config hashref,
-  returns a hash where each gene id is the key to a display friendly string.
-
-=head2 allowable_codon_changes()
-  Given two codons (a from, and a to) and a GeneDesign codon table hashref, this
-  function generates every possible peptide pair that could contain the from 
-  codon and checks to see if the peptide sequence can be maintained when the
-  from codon is replaced by the to codon.  This function is of particular use 
-  when codons are being changed in genes that overlap one another.
-
-=head2 print_as_fasta()
-  takes a sequence as a string and a sequence id and returns an 80 column FASTA
-  formatted sequence block as an array reference
-
-=head1 AUTHOR
-
-Sarah Richardson <notadoctor@jhu.edu>.
 
 =head1 COPYRIGHT AND LICENSE
 

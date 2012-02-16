@@ -1,5 +1,10 @@
 Revision history for Bio::BioStudio
 
+1.04 
+	Started moving soft objects over to hard objects
+	Revamped Diff system
+	Revamped RestrictionEnzyme system to reflect changes in Bio::GeneDesign
+	added objects for Chunks and Megachunks
 1.03
 	Added Bio::BioStudio::Cairo
 	minor bug fixes

@@ -1,3 +1,24 @@
+#
+# BioStudio BLAST interface
+#
+# POD documentation - main docs before the code
+
+=head1 NAME
+
+Bio::BioStudio::BLAST
+
+=head1 VERSION
+
+Version 1.04
+
+=head1 DESCRIPTION
+
+=head1 AUTHOR
+
+Sarah Richardson <notadoctor@jhu.edu>.
+
+=cut
+
 package Bio::BioStudio::BLAST;
 require Exporter;
 
@@ -5,23 +26,49 @@ use Bio::BioStudio::Basic qw($VERNAME);
 use Bio::Seq;
 use Bio::SeqIO;
 use Bio::DB::SeqFeature::Store;
+use Bio::Tools::Run::StandAloneBlastPlus;
+use Bio::GeneDesign::Codons qw(translate);
+use Env;
 
 use strict;
 use warnings;
 
 use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.00';
+$VERSION = '1.04';
 
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(
+  make_blast_factory
   make_BLAST_db
   make_megaBLAST_index
+  bl2seq_blastn
+  bl2seq_blastp
 );
-%EXPORT_TAGS = (all => [qw(make_BLAST_db make_megaBLAST_index)]);
+%EXPORT_TAGS = (all => \@EXPORT_OK);
 
-################################################################################
-############################### BLAST functions ################################
-################################################################################
+=head1 FUNCTIONS
+
+=head2 make_blast_factory
+
+=cut
+
+sub make_blast_factory
+{
+  my ($BS) = @_;
+  $ENV{BLASTPLUSDIR} = $BS->{blast_executables};
+  my $factory = Bio::Tools::Run::StandAloneBlastPlus->new(
+                          -DB_DIR => $BS->{blast_directory});
+  return $factory;
+}
+
+=head2 _make_FASTA()
+
+  given a hashref of chromosomes (where the key is the name and the value is the
+  path, see Bio::BioStudio::Basic::gather_versions()), the BioStudio config
+  hashref, and a label, creates a FASTA file that contains all of their
+  sequences for BLAST database creation
+
+=cut
 
 sub _make_FASTA
 {
@@ -35,7 +82,7 @@ sub _make_FASTA
     foreach my $chr (keys %$gff_hsh)
     {
       print "Loading $chr...\n";
-      my $db = Bio::DB::SeqFeature::Store->new( 
+      my $db = Bio::DB::SeqFeature::Store->new(
           -adaptor => 'memory',
           -dir     => $gff_hsh->{$chr} );
       my $chrname = $2 if ($chr =~ $VERNAME);
@@ -52,6 +99,15 @@ sub _make_FASTA
   }
   return;
 }
+
+=head2 make_BLAST_db()
+
+  given a hashref of chromosomes (where the key is the name and the value is the
+  path, see Bio::BioStudio::Basic::gather_versions()), the BioStudio config
+  hashref, and a label, creates a BLAST database containing all of the
+  chromosome sequences in the hashref
+
+=cut
 
 sub make_BLAST_db
 {
@@ -72,6 +128,13 @@ sub make_BLAST_db
   return $BS->{blast_directory} . "/" . $label;
 }
 
+=head2 make_megaBLAST_index()
+ 
+  given the name of a BLAST database, a BioStudio config hashref, and a label,
+  creates a megaBLAST index to speed BLASTing
+
+=cut
+
 sub make_megaBLAST_index
 {
   my ($BLASTdb, $BS, $label) = @_;
@@ -87,43 +150,52 @@ sub make_megaBLAST_index
   return $megaBLASTidx;
 }
 
+=head2 bl2seq_blastn()
+
+=cut
+
+sub bl2seq_blastn
+{
+  my ($feat1, $feat2, $blast) = @_;
+  my $alnz = $blast->bl2seq(
+                          -method  => 'blastn',
+                          -query   => $feat2->seq,
+                          -subject => $feat1->seq,
+                          -method_args => [
+                            gapopen => 11,
+                            gapextend => 2]);
+  $blast->cleanup;
+  return $alnz;
+}
+
+=head2 bl2seq_blastp()
+
+=cut
+
+sub bl2seq_blastp
+{
+  my ($feat1, $feat2, $CODON_TABLE, $blast) = @_;
+  my $f1phase = $feat1->phase ? $feat1->phase : 0;
+  my $f2phase = $feat2->phase ? $feat2->phase : 0;
+  my $newfeat1 = Bio::Seq->new(
+                -id => $feat1->id,
+                -seq => translate($feat1->seq->seq, $f1phase + 1, $CODON_TABLE),
+                -alphabet => 'protein');
+  my $newfeat2 = Bio::Seq->new(
+                -id => $feat2->id,
+                -seq => translate($feat2->seq->seq, $f2phase + 1, $CODON_TABLE),
+                -alphabet => 'protein');
+  my $alnz = $blast->bl2seq(
+                          -method  => 'blastp',
+                          -query   => $newfeat2,
+                          -subject => $newfeat1);
+  $blast->cleanup;
+  return $alnz;
+}
+
 1;
 
 __END__
-
-=head1 NAME
-
-BioStudio::BLAST
-
-=head1 VERSION
-
-Version 1.03
-
-=head1 DESCRIPTION
-
-BioStudio functions for BLAST functionality
-
-=head1 FUNCTIONS
-
-=head2 _make_FASTA()
-  given a hashref of chromosomes (where the key is the name and the value is the 
-  path, see Bio::BioStudio::Basic::gather_versions()), the BioStudio config 
-  hashref, and a label, creates a FASTA file that contains all of their 
-  sequences for BLAST database creation
-
-=head2 make_BLAST_db()
-  given a hashref of chromosomes (where the key is the name and the value is the 
-  path, see Bio::BioStudio::Basic::gather_versions()), the BioStudio config 
-  hashref, and a label, creates a BLAST database containing all of the 
-  chromosome sequences in the hashref
-
-=head2 make_megaBLAST_index()
-  given the name of a BLAST database, a BioStudio config hashref, and a label,
-  creates a megaBLAST index to speed BLASTing
-
-=head1 AUTHOR
-
-Sarah Richardson <notadoctor@jhu.edu>.
 
 =head1 COPYRIGHT AND LICENSE
 

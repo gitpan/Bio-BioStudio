@@ -4,11 +4,18 @@ ignore.txt
 lib/Bio/BioStudio/Basic.pm
 lib/Bio/BioStudio/BLAST.pm
 lib/Bio/BioStudio/Cairo.pm
+lib/Bio/BioStudio/Chunk.pm
 lib/Bio/BioStudio/Diff.pm
+lib/Bio/BioStudio/Diff/Difference.pm
+lib/Bio/BioStudio/Diff/Factory.pm
 lib/Bio/BioStudio/Foswiki.pm
 lib/Bio/BioStudio/GBrowse.pm
 lib/Bio/BioStudio/GFF3.pm
+lib/Bio/BioStudio/Marker.pm
+lib/Bio/BioStudio/Megachunk.pm
 lib/Bio/BioStudio/MySQL.pm
+lib/Bio/BioStudio/RestrictionEnzyme.pm
+lib/Bio/BioStudio/RestrictionEnzyme/Store.pm
 Makefile.PL
 MANIFEST			This list of files
 META.json
