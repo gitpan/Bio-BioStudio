@@ -1,7 +1,6 @@
 #
 # BioStudio functions for GFF3 interaction
 #
-# POD documentation - main docs before the code
 
 =head1 NAME
 
@@ -9,7 +8,7 @@ Bio::BioStudio::GFF3 - GFF3 interaction
 
 =head1 VERSION
 
-Version 1.04
+Version 1.05
 
 =head1 DESCRIPTION
 
@@ -22,8 +21,8 @@ Sarah Richardson <notadoctor@jhu.edu>.
 =cut
 
 package Bio::BioStudio::GFF3;
-require Exporter;
 
+use Exporter;
 use Bio::BioStudio::Basic qw($VERNAME &print_as_fasta);
 use URI::Escape;
 use Perl6::Slurp;
@@ -32,17 +31,15 @@ use Carp;
 use strict;
 use warnings;
 
-use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.04';
+our $VERSION = '1.05';
 
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(
+our @ISA = qw(Exporter);
+our @EXPORT_OK = qw(
   get_GFF_comments
   make_GFF3
   gff3_string
- 
 );
-%EXPORT_TAGS = (all => \@EXPORT_OK);
+our %EXPORT_TAGS = (all => \@EXPORT_OK);
  
 my %PHASES = (0 => 1, 1 => 1, 2 => 1);
 my $COMMENT			=	qr/^\#/;
@@ -50,8 +47,9 @@ my $COMMENT			=	qr/^\#/;
 =head1 Functions
 
 =head2 get_GFF_comments()
-  Given a chromosome name and the BioStudio config hashref, returns an arrayref
-  containing all of the comments and directives from a GFF3 file.
+
+Given a chromosome name and the BioStudio config hashref, returns an arrayref
+containing all of the comments and directives from a GFF3 file.
 
 =cut
 
@@ -69,7 +67,7 @@ sub get_GFF_comments
 
 =head2 gff3_string()
 
-  Bio::DB::SeqFeature no gff3_out
+Bio::DB::SeqFeature has no gff3_out?
 
 =cut
 
@@ -154,26 +152,29 @@ __END__
 Copyright (c) 2011, BioStudio developers
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * Neither the name of the Johns Hopkins nor the
-      names of the developers may be used to endorse or promote products
-      derived from this software without specific prior written permission.
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this 
+list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or 
+other materials provided with the distribution.
+
+* Neither the name of the Johns Hopkins nor the names of the developers may be 
+used to endorse or promote products derived from this software without specific 
+prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =cut

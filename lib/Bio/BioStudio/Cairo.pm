@@ -1,7 +1,6 @@
 #
-# Basic BioStudio functions
+# BioStudio functions for Cairo interaction
 #
-# POD documentation - main docs before the code
 
 =head1 NAME
 
@@ -9,11 +8,11 @@ BioStudio::Cairo
 
 =head1 VERSION
 
-Version 1.04
+Version 1.05
 
 =head1 DESCRIPTION
 
-BioStudio functions for Cairo interaction.
+BioStudio functions to draw graphic maps from annotated chromosomes
 
 =head1 AUTHOR
 
@@ -22,8 +21,8 @@ Sarah Richardson <notadoctor@jhu.edu>.
 =cut
 
 package Bio::BioStudio::Cairo;
-require Exporter;
 
+use Exporter;
 use Bio::BioStudio::Basic qw($VERNAME);
 use DBI;
 use Carp;
@@ -34,11 +33,10 @@ use Math::Trig ':pi';
 use strict;
 use warnings;
 
-use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.04';
+our $VERSION = '1.05';
 
-@ISA = qw(Exporter);
-@EXPORT_OK = qw( 
+our @ISA = qw(Exporter);
+our @EXPORT_OK = qw( 
   draw_scale
   draw_feature
   draw_RE
@@ -53,7 +51,7 @@ $VERSION = '1.04';
   draw_UTC
   draw_deletion
 );
-%EXPORT_TAGS = (
+our %EXPORT_TAGS = (
   all => \@EXPORT_OK, basic => [qw(draw_scale draw_feature)]);
 
 my %featsize = ("site_specific_recombination_target_region" => 50,
@@ -62,6 +60,8 @@ my %featsize = ("site_specific_recombination_target_region" => 50,
 =head1 Functions
 
 =head2 draw_scale
+
+Draws the backbone and scale marks of the diagram.
 
 =cut
 
@@ -702,26 +702,29 @@ __END__
 Copyright (c) 2011, BioStudio developers
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * Neither the name of the Johns Hopkins nor the
-      names of the developers may be used to endorse or promote products
-      derived from this software without specific prior written permission.
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this 
+list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or 
+other materials provided with the distribution.
+
+* Neither the name of the Johns Hopkins nor the names of the developers may be 
+used to endorse or promote products derived from this software without specific 
+prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =cut

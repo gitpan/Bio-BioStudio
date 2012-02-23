@@ -1,7 +1,6 @@
 #
 # BioStudio module for MySQL database interactions
 #
-# POD documentation - main docs before the code
 
 =head1 NAME
 
@@ -9,7 +8,7 @@ Bio::BioStudio::MySQL
 
 =head1 VERSION
 
-Version 1.04
+Version 1.05
 
 =head1 DESCRIPTION
 
@@ -22,8 +21,8 @@ Sarah Richardson <notadoctor@jhu.edu>.
 =cut
 
 package Bio::BioStudio::MySQL;
-require Exporter;
 
+use Exporter;
 use Bio::BioStudio::Basic qw($VERNAME);
 use Bio::BioStudio::RestrictionEnzyme;
 use DBI;
@@ -33,11 +32,10 @@ use Bio::DB::SeqFeature::Store;
 use strict;
 use warnings;
 
-use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.04';
+our $VERSION = '1.05';
 
-@ISA = qw(Exporter);
-@EXPORT_OK = qw( 
+our @ISA = qw(Exporter);
+our @EXPORT_OK = qw( 
   drop_database
   list_databases
   create_database
@@ -45,12 +43,14 @@ $VERSION = '1.04';
   fetch_database
   db_execute
 );
-%EXPORT_TAGS = (all => \@EXPORT_OK);
+our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 =head2 list_databases
 
-  Arguments : BioStudio configuration hashref
-  Returns : a hash containing all BioStudio database names as keys
+This function returns a hash reference containing all BioStudio database names 
+as keys.
+
+  Arguments: The BioStudio configuration hashref
 
 =cut
 
@@ -75,9 +75,11 @@ sub list_databases
 
 =head2 create_database
 
-  Arguments : Chromsome name as string, BioStudio configuration hashref
-  Function : Creates a MySQL database that is ready to be loaded with chromosome
-             data. It does NOT load that database.
+This function creates a MySQL database that is ready to be loaded with 
+chromosome data. It does NOT load that database.
+
+  Arguments: A database name,
+             the BioStudio configuration hashref
 
 =cut
 
@@ -97,15 +99,16 @@ sub create_database
 
 =head2 load_database
 
-  Arguments: Database/chromosome name as string, BioStudio configuration hashref
-             and optionally, the name of an alternate chromosome to be loaded
-             using the database name provided in the first argument
-  Function : This function loads a MySQL database (which must have been
-             previously created, see create_database()) with a GFF file. The
-             file is the one corresponding to the first argument provided
-             unless the alternate is defined, in which case the file
-             corresponding to the third argument is loaded into a database
-             named after the first argument.
+This function loads a MySQL database (which must have been previously created, 
+see create_database()) with a GFF file. The file is the one corresponding to the
+first argument provided unless the alternate is defined, in which case the file
+corresponding to the third argument is loaded into a database named after the 
+first argument.
+
+  Arguments: Database name as string
+             BioStudio configuration hashref
+             Optionally, the name of an alternate chromosome to be loaded using
+               the database name provided in the first argument
 
 =cut
 
@@ -125,13 +128,15 @@ sub load_database
 
 =head2 fetch_database
 
-  Arguments: Database/chromosome name, BioStudio configuration hashref
-             and optionally, a write flag
+Fetches a Bio::DB::SeqFeature::Store interface for a MySQL database containing 
+the annotations of the argument chromosome. An optional write flag sets whether 
+or not the interface will support adding, deleting, or modifying features.
+
+  Arguments: Database name 
+             BioStudio configuration hashref
+             Optionally, a write flag
+             
   Returns: A L<Bio::DB::SeqFeature::Store> object.
-  Function: Fetches a Bio::DB::SeqFeature::Store interface for a MySQL database
-            containing the annotations of the argument chromosome. An optional
-            write flag sets whether or not the interface will support adding,
-            deleting, or modifying features.
 
 =cut
 
@@ -151,8 +156,10 @@ sub fetch_database
 
 =head2 drop_database
 
-  Arguments: Database/chromosome name, BioStudio configuration hashref
-  Function: Deletes the MySQL database containing the chromosome.
+This function deletes a MySQL database.
+ 
+  Arguments: Database name
+             BioStudio configuration hashref
 
 =cut
 
@@ -171,7 +178,7 @@ sub drop_database
 
 =head2 db_execute
 
-  Execute an arbitrary command on an arbitrary database
+Execute an arbitrary command on an arbitrary database
   
 =cut
 
@@ -195,29 +202,32 @@ __END__
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2012, BioStudio developers
+Copyright (c) 2011, BioStudio developers
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * Neither the name of the Johns Hopkins nor the
-      names of the developers may be used to endorse or promote products
-      derived from this software without specific prior written permission.
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this 
+list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or 
+other materials provided with the distribution.
+
+* Neither the name of the Johns Hopkins nor the names of the developers may be 
+used to endorse or promote products derived from this software without specific 
+prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =cut

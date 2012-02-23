@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-Bio::BioStudio::Marker
+Bio::BioStudio::Feature
 
 =head1 VERSION
 
@@ -12,13 +12,19 @@ Version 1.05
 
 =head1 DESCRIPTION
 
+BioStudio object that represents a restriction enzyme - inherits from 
+Bio::GeneDesign::Feature and adds attributes for feature annotation
+awareness
+
 =head1 AUTHOR
 
 Sarah Richardson <notadoctor@jhu.edu>
 
 =cut
 
-package Bio::BioStudio::Marker;
+package Bio::BioStudio::Feature;
+
+use Switch;
 
 use strict;
 
@@ -32,7 +38,7 @@ my $VERSION = 1.05;
 
  Title   : new
  Function:
- Returns : a new Bio::BioStudio::Marker object
+ Returns : a new Bio::BioStudio::Feature object
  Args    :
 
 =cut
@@ -44,46 +50,53 @@ sub new
   
   bless $self, $class;
   
-  my ($name, $db) =
+  my ($name, $type, $source, $sequence) =
      $self->_rearrange([qw(NAME
-                           DB)], @args);
+                           TYPE
+                           SOURCE
+                           SEQUENCE)], @args);
 
-  $self->throw("No name defined") unless ($name);
   $self->{'name'} = $name;
 
-  $self->throw("No db defined") unless ($db);
-  $self->{'db'} = $db;
-  
-  my @regions = $db->get_features_by_type("region");
-  my $region = $regions[0];
-  if ($region->has_tag("color"))
-  {
-    $self->{'color'} = "#" . join("", $region->get_tag_values("color"));
-  }
-  $self->sequence($region->seq->seq);
+  $self->{'type'} = $type;
+
+  $self->{'source'} = $source;
+
+  $self->{'sequence'} = $sequence;    
 
   return $self;
 }
 
-=head1 FUNCTIONS
-
 =head1 ACCESSORS
 
-=head2 db
+=head2 name
 
 =cut
 
-sub db
+sub name
 {
-  my ($self, $value) = @_;
-  if (defined $value)
-  {
-	  $self->throw("object of class " . ref($value) . " does not implement ".
-		    "Bio::DB::SeqFeature::Store.")
-		  unless $value->isa("Bio::DB::SeqFeature::Store");
-    $self->{'db'} = $value;
-  }
-  return $self->{'db'};
+  my ($self) = @_;
+  return $self->{'name'};
+}
+
+=head2 type
+
+=cut
+
+sub type
+{
+  my ($self) = @_;
+  return $self->{'type'};
+}
+
+=head2 source
+
+=cut
+
+sub source
+{
+  my ($self) = @_;
+  return $self->{'source'};
 }
 
 =head2 sequence
@@ -92,68 +105,8 @@ sub db
 
 sub sequence
 {
-  my ($self, $value) = @_;
-  if (defined $value)
-  {
-    $self->{'sequence'} = $value;
-  }
+  my ($self) = @_;
   return $self->{'sequence'};
-}
-
-=head2 name
-
-=cut
-
-sub name
-{
-  my ($self, $value) = @_;
-  if (defined $value)
-  {
-    $self->{'name'} = $value;
-  }
-  return $self->{'name'};
-}
-
-=head2 color
-
-=cut
-
-sub color
-{
-  my ($self, $value) = @_;
-  if (defined $value)
-  {
-    $self->{'color'} = $value;
-  }
-  return $self->{'color'};
-}
-
-=head2 removeable_enzymes
-
-=cut
-
-sub removeable_enzymes
-{
-  my ($self, $value) = @_;
-  if (defined $value)
-  {
-    $self->{'removeable_enzymes'} = $value;
-  }
-  return $self->{'removeable_enzymes'} ? $self->{'removeable_enzymes'}  : {};
-}
-
-=head2 static_enzymes
-
-=cut
-
-sub static_enzymes
-{
-  my ($self, $value) = @_;
-  if (defined $value)
-  {
-    $self->{'static_enzymes'} = $value;
-  }
-  return $self->{'static_enzymes'}  ? $self->{'static_enzymes'} : {};
 }
 
 1;

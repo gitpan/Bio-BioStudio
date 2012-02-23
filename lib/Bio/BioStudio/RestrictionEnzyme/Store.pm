@@ -1,7 +1,6 @@
 #
 # BioStudio module for sequence segmentation
 #
-# POD documentation - main docs before the code
 
 =head1 NAME
 
@@ -9,9 +8,13 @@ Bio::BioStudio::RestrictionEnzyme::Store
 
 =head1 VERSION
 
-Version 1.04
+Version 1.05
 
 =head1 DESCRIPTION
+
+An object that stores the database handle for a MySQL database full of 
+restriction enzyme recognition sites - usually corresponding to the sites
+found on a chromosome that is being prepared for segmentation.
 
 =head1 AUTHOR
 
@@ -21,24 +24,36 @@ Sarah Richardson <notadoctor@jhu.edu>
 
 package Bio::BioStudio::RestrictionEnzyme::Store;
 
-use Switch;
-
 use strict;
 
 use base qw(Bio::Root::Root);
 
-my $VERSION = 1.04;
+my $VERSION = 1.05;
 my $tblname = "positions";
 
 =head1 CONSTRUCTORS
 
 =head2 new
 
- Title   : new
- Function:
- Returns :
- Args    :
+There are two required arguments:
 
+    -name       the name of the database
+    
+    -enzyme_definitions       This is a reference to a hash that has 
+                L<Bio::GeneDesign::RestrictionEnzyme> objects as values. This
+                hash can be obtained from the GeneDesign function define_sites.
+ 
+The other arguments are optional:   
+
+    -user    The user name for the MySQL database
+    
+    -pass    The password for the MySQL database
+    
+    -file    Path to a dumpfile that is used to quickload the MySQL database.
+    
+    -create  A flag that causes creation of the database. Otherwise, an attempt
+             is made to open a handle to an existing database.
+    
 =cut
 
 sub new
@@ -47,12 +62,8 @@ sub new
   my $self = $class->SUPER::new(@args);
 
   my ($name, $user, $pass, $file, $create, $RES) =
-     $self->_rearrange([qw(NAME
-                           USER
-                           PASS
-                           FILE
-                           CREATE
-                           ENZYME_DEFINITIONS)], @args);
+     $self->_rearrange([qw(NAME USER PASS FILE CREATE 
+      ENZYME_DEFINITIONS)], @args);
 
   $self->throw("No name defined") unless ($name);
   $self->{'name'} = $name;
@@ -86,20 +97,9 @@ sub new
 
 =head1 FUNCTIONS
 
-=head2 _initialize
-
-=cut
-
-sub _initialize
-{
-  my ($self) = @_;
-  my $def = $self->_table_definition;
-  my $command = "CREATE table IF NOT EXISTS $tblname $def->{$tblname}";
-  $self->dbh->do($command) or die ($self->dbh->errstr."\n");
-  return;
-}
-
 =head2 load
+
+Load the database from the dumpfile (defined during the call to new)
 
 =cut
 
@@ -118,6 +118,19 @@ sub load
 }
 
 =head2 search
+
+Performs a search of the database.
+
+  -name   search by the name field
+  
+  -left   a lower bound for the search on the start field
+  
+  -right  an upper bound for the search on the start field
+  
+  -enzyme search by the id of the enzyme (BamHI, BssSI etc)
+
+Returns an array reference containing L<Bio::BioStudio::RestrictionEnzyme> 
+objects.
 
 =cut
 
@@ -167,6 +180,11 @@ sub search
 
 =head2 cull
 
+Removes entries from the database.
+
+  Arguments: a reference to a list of numbers that correspond to primary ids in
+      the database; all rows whose primary key is in the list will be removed.
+
 =cut
 
 sub cull
@@ -186,6 +204,12 @@ sub cull
 
 =head2 screen
 
+Marks entries in the database as ineligible (sets the eligible field to "no").
+
+  Arguments: a reference to a list of numbers that correspond to primary ids in 
+      the database; all rows whose primary key is in the list will be marked
+      ineligible.
+      
 =cut
 
 sub screen
@@ -203,23 +227,23 @@ sub screen
   return;
 }
 
-=head1 ACCESSORS
+=head1 Accessor functions
 
 =head2 dbh
+
+Returns the database handle linked to the MySQL database.
 
 =cut
 
 sub dbh
 {
-  my ($self, $value) = @_;
-  if (defined $value)
-  {
-	  $self->{'dbh'} = $value;
-  }
+  my ($self) = @_;
   return $self->{'dbh'};
 }
 
 =head2 name
+
+Returns the name of the database.
 
 =cut
 
@@ -235,6 +259,8 @@ sub name
 
 =head2 user
 
+Returns the username used to access the MySQL database.
+
 =cut
 
 sub user
@@ -248,6 +274,8 @@ sub user
 }
 
 =head2 dumpfile
+
+Returns the path to the file used to quickload the MySQL database.
 
 =cut
 
@@ -263,6 +291,10 @@ sub dumpfile
 
 =head2 enzyme_definitions
 
+The hash of generic L<Bio::GeneDesign::RestrictionEnzyme> objects that are used
+to bootstrap creation of L<Bio::BioStudio::RestrictionEnzyme> objects. This hash
+can be created by calling L<Bio::GeneDesign::RestrictionEnzymes::define_sites>
+
 =cut
 
 sub enzyme_definitions
@@ -271,7 +303,26 @@ sub enzyme_definitions
   return $self->{'enzyme_definitions'};
 }
 
+=head1 Private functions
+
+=head2 _initialize
+
+Creates the only table in the database.
+
+=cut
+
+sub _initialize
+{
+  my ($self) = @_;
+  my $def = $self->_table_definition;
+  my $command = "CREATE table IF NOT EXISTS $tblname $def->{$tblname}";
+  $self->dbh->do($command) or die ($self->dbh->errstr."\n");
+  return;
+}
+
 =head2 _table_definition
+
+Private: the SQL definition of the table that stores enzyme information
 
 =cut
 
@@ -310,26 +361,29 @@ __END__
 Copyright (c) 2011, BioStudio developers
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * Neither the name of the Johns Hopkins nor the
-      names of the developers may be used to endorse or promote products
-      derived from this software without specific prior written permission.
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this 
+list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or 
+other materials provided with the distribution.
+
+* Neither the name of the Johns Hopkins nor the names of the developers may be 
+used to endorse or promote products derived from this software without specific 
+prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =cut

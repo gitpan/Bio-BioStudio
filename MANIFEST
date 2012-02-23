@@ -8,9 +8,11 @@ lib/Bio/BioStudio/Chunk.pm
 lib/Bio/BioStudio/Diff.pm
 lib/Bio/BioStudio/Diff/Difference.pm
 lib/Bio/BioStudio/Diff/Factory.pm
+lib/Bio/BioStudio/Feature.pm
 lib/Bio/BioStudio/Foswiki.pm
 lib/Bio/BioStudio/GBrowse.pm
 lib/Bio/BioStudio/GFF3.pm
+lib/Bio/BioStudio/Git.pm
 lib/Bio/BioStudio/Marker.pm
 lib/Bio/BioStudio/Megachunk.pm
 lib/Bio/BioStudio/MySQL.pm

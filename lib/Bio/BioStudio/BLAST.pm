@@ -1,7 +1,6 @@
 #
 # BioStudio BLAST interface
 #
-# POD documentation - main docs before the code
 
 =head1 NAME
 
@@ -9,7 +8,7 @@ Bio::BioStudio::BLAST
 
 =head1 VERSION
 
-Version 1.04
+Version 1.05
 
 =head1 DESCRIPTION
 
@@ -20,8 +19,8 @@ Sarah Richardson <notadoctor@jhu.edu>.
 =cut
 
 package Bio::BioStudio::BLAST;
-require Exporter;
 
+use Exporter;
 use Bio::BioStudio::Basic qw($VERNAME);
 use Bio::Seq;
 use Bio::SeqIO;
@@ -33,22 +32,24 @@ use Env;
 use strict;
 use warnings;
 
-use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.04';
+our $VERSION = '1.05';
 
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(
+our @ISA = qw(Exporter);
+our @EXPORT_OK = qw(
   make_blast_factory
   make_BLAST_db
   make_megaBLAST_index
   bl2seq_blastn
   bl2seq_blastp
 );
-%EXPORT_TAGS = (all => \@EXPORT_OK);
+our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 =head1 FUNCTIONS
 
 =head2 make_blast_factory
+
+Returns a L<Bio::Tools::Run::StandAloneBlastPlus> object that can be used to 
+run BLAST queries.
 
 =cut
 
@@ -61,12 +62,14 @@ sub make_blast_factory
   return $factory;
 }
 
-=head2 _make_FASTA()
+=head2 _make_FASTA
 
-  given a hashref of chromosomes (where the key is the name and the value is the
-  path, see Bio::BioStudio::Basic::gather_versions()), the BioStudio config
-  hashref, and a label, creates a FASTA file that contains all of their
-  sequences for BLAST database creation
+creates a FASTA file for BLAST database creation.
+
+  Arguments: a hashref of chromosome, where the key is the name and the value is 
+                the path, see L<Bio::BioStudio::Basic::gather_versions>
+             the BioStudio configuration hashref
+             a label
 
 =cut
 
@@ -100,12 +103,14 @@ sub _make_FASTA
   return;
 }
 
-=head2 make_BLAST_db()
+=head2 make_BLAST_db
 
-  given a hashref of chromosomes (where the key is the name and the value is the
-  path, see Bio::BioStudio::Basic::gather_versions()), the BioStudio config
-  hashref, and a label, creates a BLAST database containing all of the
-  chromosome sequences in the hashref
+creates a BLAST database.
+
+  Arguments: a hashref of chromosomes where the key is the name and the value is
+                the path, see L<Bio::BioStudio::Basic::gather_versions>
+             the BioStudio configuration hashref
+             a label
 
 =cut
 
@@ -128,10 +133,13 @@ sub make_BLAST_db
   return $BS->{blast_directory} . "/" . $label;
 }
 
-=head2 make_megaBLAST_index()
+=head2 make_megaBLAST_index
  
-  given the name of a BLAST database, a BioStudio config hashref, and a label,
-  creates a megaBLAST index to speed BLASTing
+creates a megaBLAST index to speed BLASTing
+
+  Arguments: the name of a BLAST database
+             the BioStudio configuration hashref
+             a label
 
 =cut
 
@@ -150,8 +158,14 @@ sub make_megaBLAST_index
   return $megaBLASTidx;
 }
 
-=head2 bl2seq_blastn()
+=head2 bl2seq_blastn
 
+Runs a bl2seq on the nucleotide sequences of two features.
+
+  Arguments: two L<Bio::DB::SeqFeature> objects
+             a L<Bio::Tools::Run::StandAloneBlastPlus> object, probably from 
+                the make_blast_factory function
+           
 =cut
 
 sub bl2seq_blastn
@@ -168,7 +182,14 @@ sub bl2seq_blastn
   return $alnz;
 }
 
-=head2 bl2seq_blastp()
+=head2 bl2seq_blastp
+
+Runs a bl2seq on the translated sequences of two features.
+
+  Arguments: two L<Bio::DB::SeqFeature> objects
+             a GeneDesign codon table hashref, from define_codon_table()
+             a L<Bio::Tools::Run::StandAloneBlastPlus> object, probably from 
+                the make_blast_factory function
 
 =cut
 
@@ -202,26 +223,29 @@ __END__
 Copyright (c) 2011, BioStudio developers
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * Neither the name of the Johns Hopkins nor the
-      names of the developers may be used to endorse or promote products
-      derived from this software without specific prior written permission.
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this 
+list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or 
+other materials provided with the distribution.
+
+* Neither the name of the Johns Hopkins nor the names of the developers may be 
+used to endorse or promote products derived from this software without specific 
+prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =cut

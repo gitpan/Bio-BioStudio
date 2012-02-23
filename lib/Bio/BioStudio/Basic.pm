@@ -1,7 +1,6 @@
 #
 # Basic BioStudio functions
 #
-# POD documentation - main docs before the code
 
 =head1 NAME
 
@@ -9,7 +8,7 @@ BioStudio::Basic - basic functions for the BioStudio synthetic biology framework
 
 =head1 VERSION
 
-Version 1.04
+Version 1.05
 
 =head1 DESCRIPTION
 
@@ -22,9 +21,10 @@ Sarah Richardson <notadoctor@jhu.edu>.
 =cut
 
 package Bio::BioStudio::Basic;
-require Exporter;
 
+use Exporter;
 use Bio::GeneDesign::Basic qw(:all);
+use Bio::BioStudio::Feature;
 use Bio::BioStudio::Marker;
 use Bio::GeneDesign::Codons qw(translate amb_translation);
 use File::Find;
@@ -36,11 +36,10 @@ use Bio::DB::SeqFeature::Store;
 use strict;
 use warnings;
 
-use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.04';
+our $VERSION = '1.05';
 
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(
+our @ISA = qw(Exporter);
+our @EXPORT_OK = qw(
   configure_BioStudio
   fetch_custom_features
   fetch_custom_markers
@@ -60,8 +59,9 @@ $VERSION = '1.04';
   print_as_fasta
   rollback
   $VERNAME
+  $VERSION
 );
-%EXPORT_TAGS = (all => \@EXPORT_OK);
+our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 our $VERNAME		=	qr/([\w]+)_chr([\w\d]+)_(\d+)_(\d+)/;      
 
@@ -69,9 +69,9 @@ our $VERNAME		=	qr/([\w]+)_chr([\w\d]+)_(\d+)_(\d+)/;
 
 =head2 configure_BioStudio()
 
-  This function loads the configuration file into a hash ref. You must pass it
-  the path to the directory containing the configuration file; it will use
-  Config::Auto to ``magically'' parse the file. 
+This function loads the configuration file into a hash ref. You must pass it the
+path to the directory containing the configuration file; it will use 
+Config::Auto to ``magically'' parse the file. 
 
 =cut
 
@@ -105,35 +105,35 @@ sub configure_BioStudio
 
 =head2 fetch_custom_features()
 
-  Pass the config hashref, receive a hashref of the custom features defined in
-  the BioStudio configuration directory. Each feature has four attributes: NAME,
-  KIND, SOURCE, and SEQ
+Pass the config hashref, receive a hashref of the custom features defined in the
+BioStudio configuration directory. Each key is a feature name, each value is a 
+L<Bio::BioStudio::Feature> object.
 
 =cut
 
 sub fetch_custom_features
 {
   my ($BS) = @_;
-  my %BS_FEATURES;
-  my @feats = slurp($BS->{feature_file});
-  foreach my $featline (@feats)
+  opendir(DIR, $BS->{feature_dir});
+  my @features = grep {$_ =~ /\.feat\Z/} readdir(DIR);
+  closedir DIR;
+  my %features;
+  foreach my $feature (@features)
   {
-    my @featatts = split(/[\t\n]+/, $featline);
-    my $feature = {};
-    $feature->{NAME} = $featatts[0];
-    $feature->{KIND} = $featatts[1];
-    $feature->{SOURCE} = $featatts[2];
-    $feature->{SEQ} = uc $featatts[3];
-    $BS_FEATURES{$featatts[0]} = $feature;
+    my $hsh = Config::Auto::parse($feature, ("path" => $BS->{feature_dir}));
+    my $bsfeat = Bio::BioStudio::Feature->new();
+    $bsfeat->{$_} = $hsh->{$_} foreach (keys %$hsh);
+    
+    $features{$bsfeat->name} = $bsfeat;
   }
-  return \%BS_FEATURES;
+  return \%features;
 }
 
 =head2 fetch_custom_markers()
 
-  Pass the config hashref, receive a hashref of the custom markers defined in
-  the BioStudio configuration directory. Each key in the hashref is a marker
-  name, each value in the hashref is a L<Bio::BioStudio::Marker> object.
+Pass the config hashref, receive a hashref of the custom markers defined in the
+BioStudio configuration directory. Each key in the hashref is a marker name, 
+each value in the hashref is a L<Bio::BioStudio::Marker> object.
 
 =cut
 
@@ -162,9 +162,8 @@ sub fetch_custom_markers
 
 =head2 fetch_enzyme_lists()
 
-  Pass the config hashref, receive an array that contains the names of the
-  enzyme lists in the BioStudio configuration directory. Each list is a
-  GeneDesign compatible list of restriction enzyme recognition sites.
+Pass the config hashref, receive an array that contains the names of the enzyme
+lists in the BioStudio configuration directory. 
 
 =cut
 
@@ -182,11 +181,11 @@ sub fetch_enzyme_lists
 
 =head2 make_mask()
 
-  Given a length, a reference to a list full of Bio::SeqFeatures, and optionally
-  an offset, returns a string of integers where each positon corresponds to a
-  base of sequence, and the integer represents the number of features that
-  overlap that base. Obviously limited to ten overlapping features before a
-  serious bug sets in :(
+Given a length, an array reference full of L<Bio::DB::SeqFeature>s, and 
+optionally an offset, returns a string of integers where each positon 
+corresponds to a base of sequence, and the integer represents the number of 
+features that overlap that base. Obviously limited to ten overlapping features
+before a serious bug sets in :(
 
 =cut
 
@@ -209,8 +208,7 @@ sub make_mask
 
 =head2 mask_combine()
 
-  Takes two string masks (see make_mask()) and adds them. Returns the merged
-  mask.
+Takes two string masks (see make_mask()) and adds them. Returns the merged mask.
 
 =cut
 
@@ -228,14 +226,16 @@ sub mask_combine
 
 =head2 mask_filter()
 
-  Takes a string mask (see make_mask()) and returns a listref of break
-  coordinates; that is, where does feature sequence end and interfeature
-  sequence begin, and where does interfeature sequence end and feature sequence
-  begin? For example, if the mask is "0001100033221100", the resulting list
-  would be [0 3 5 8 14 16], meaning that features exist from 4 to 5 and 9 to 14.
-  Intergenic sequence coordinates can thus be pulled out by hashing the array,
-  %inter = @{mask_filter($mask)} where each key + 1 is the left coordinate,
-  and the value is the right coordinate.
+Takes a string mask (see make_mask()) and returns a listref of break 
+coordinates; that is, where does feature sequence end and interfeature sequence
+begin, and where does interfeature sequence end and feature sequence begin? For
+example, if the mask is "0001100033221100", the resulting list would be 
+[0 3 5 8 14 16], meaning that features exist from 4 to 5 and 9 to 14. Intergenic 
+sequence coordinates can thus be pulled out by hashing the array,
+
+  %inter = @{mask_filter($mask)} 
+
+where each key +1 is the left coordinate, and the value is the right coordinate.
 
 =cut
 
@@ -252,8 +252,8 @@ sub mask_filter
 
 =head2 get_src_path()
 
-  Given a chromosome name and the config hashref, returns the absolute path to
-  that chromosome in the BioStudio genome repository.
+Given a chromosome name and the config hashref, returns the absolute path to 
+that chromosome in the BioStudio genome repository.
 
 =cut
 
@@ -267,8 +267,8 @@ sub get_src_path
 
 =head2 get_genome_list()
 
-  Given the config hashref, returns a list of all chromosomes in the BioStudio
-  genome repository.
+Given the config hashref, returns a list of all chromosomes in the BioStudio
+genome repository.
 
 =cut
 
@@ -288,12 +288,15 @@ sub get_genome_list
 
 =head2 gather_versions()
 
-  Given a species, a target, and the config hashref, returns a hashref of all
-  chromosomes in the species in the BioStudio genome repository that match the
-  target.  The target is an integer that represents a version. 
-  If target is set to 0, we will return every wildtype version.
-  If target is set to -1, we will return every latest version.
-  For any other target (1, 3, 5) we will return that particular version.
+Given a species, a target, and the config hashref, returns a hashref of all
+chromosomes in the species in the BioStudio genome repository that match the
+target.  The target is an integer that represents a version. 
+
+If target is set to 0, we will return every wildtype version.
+
+If target is set to -1, we will return every latest version.
+
+For any other target (1, 3, 5) we will return that particular version.
 
 =cut
 
@@ -353,8 +356,8 @@ sub gather_versions
 
 =head2 rollback()
 
-  Given a chromosome name and the BioStudio config hashref, removes that
-  chromosome from the BioStudio genome repository.
+Given a chromosome name and the BioStudio config hashref, removes that 
+chromosome from the BioStudio genome repository.
 
 =cut
 
@@ -373,9 +376,9 @@ sub rollback
 
 =head2 ORF_compile()
 
-  given a reference to an array full of Bio::SeqFeature gene objects, returns a
-  reference to a hash with gene ids as keys and concatenated 5' to 3' coding
-  sequences as values
+given a reference to an array full of L<Bio::SeqFeature> gene objects, returns
+a reference to a hash with gene ids as keys and concatenated 5' to 3' coding
+sequences as values
 
 =cut
 
@@ -397,9 +400,9 @@ sub ORF_compile
 
 =head2 get_feature_sequence()
 
-  For when you can't use the Bio::SeqFeature seq function. Given a
-  Bio::SeqFeature compliant feature and a sequence, returns the sequence that
-  the coordinates of the feature indicate.
+For when you can't use the Bio::SeqFeature seq function. Given a
+L<Bio::DB::SeqFeature> compliant feature and a sequence, returns the sequence 
+that the coordinates of the feature indicate.
 
 =cut
 
@@ -411,8 +414,8 @@ sub get_feature_sequence
 
 =head2 flatten_subfeats()
 
-  Given a seqfeature, iterate through its subfeatures and add all their subs to
-  one big array. Mainly need this when CDSes are hidden behind mRNAs in genes.
+Given a seqfeature, iterate through its subfeatures and add all their subs to
+one big array. Mainly need this when CDSes are hidden behind mRNAs in genes.
 
 =cut
 
@@ -426,8 +429,9 @@ sub flatten_subfeats
 
 =head2 gene_names()
 
-  Given a list of Bio::SeqFeature gene objects and the BioStudio config hashref,
-  returns a hash where each gene id is the key to a display friendly string.
+Given a list of L<Bio::DB::SeqFeature> gene objects and the BioStudio config
+hashref, returns a hash where each gene id is the key to a display friendly 
+string.
 
 =cut
 
@@ -449,11 +453,11 @@ sub gene_names
 
 =head2 allowable_codon_changes()
 
-  Given two codons (a from, and a to) and a GeneDesign codon table hashref, this
-  function generates every possible peptide pair that could contain the from
-  codon and checks to see if the peptide sequence can be maintained when the
-  from codon is replaced by the to codon.  This function is of particular use
-  when codons are being changed in genes that overlap one another.
+Given two codons (a from, and a to) and a GeneDesign codon table hashref, this
+function generates every possible peptide pair that could contain the from codon
+and checks to see if the peptide sequence can be maintained when the from codon 
+is replaced by the to codon.  This function is of particular use when codons are
+being changed in genes that overlap one another.
 
 =cut
 
@@ -495,9 +499,9 @@ sub allowable_codon_changes
 
 =head2 check_new_sequence()
 
-  Best when used as a confirmation that your edits went as expected. Given a
-  Bio::SeqFeature compliant feature that has a``newseq'' attribute, checks if
-  the newseq and the actual sequence occupied by the feature are the same
+Best when used as a confirmation that your edits went as expected. Given a
+L<Bio::DB::SeqFeature> compliant feature that has a``newseq'' attribute, checks
+if the newseq and the actual sequence occupied by the feature are the same
 
 =cut
 
@@ -513,8 +517,8 @@ sub check_new_sequence
 
 =head2 print_as_fasta()
 
-  takes a sequence as a string and a sequence id and returns an 80 column FASTA
-  formatted sequence block as an array reference
+takes a sequence as a string and a sequence id and returns an 80 column FASTA
+formatted sequence block as an array reference
 
 =cut
 
@@ -538,26 +542,29 @@ __END__
 Copyright (c) 2011, BioStudio developers
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * Neither the name of the Johns Hopkins nor the
-      names of the developers may be used to endorse or promote products
-      derived from this software without specific prior written permission.
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this 
+list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or 
+other materials provided with the distribution.
+
+* Neither the name of the Johns Hopkins nor the names of the developers may be 
+used to endorse or promote products derived from this software without specific 
+prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =cut

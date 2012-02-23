@@ -1,7 +1,6 @@
 #
 # BioStudio functions for GBrowse interaction
 #
-# POD documentation - main docs before the code
 
 =head1 NAME
 
@@ -9,7 +8,7 @@ Bio::BioStudio::GBrowse - GBrowse interaction
 
 =head1 VERSION
 
-Version 1.04
+Version 1.05
 
 =head1 DESCRIPTION
 
@@ -22,8 +21,8 @@ Sarah Richardson <notadoctor@jhu.edu>.
 =cut
 
 package Bio::BioStudio::GBrowse;
-require Exporter;
 
+use Exporter;
 use Bio::BioStudio::Basic qw($VERNAME &configure_BioStudio);
 use File::Find;
 use Time::Format qw(%time);
@@ -33,11 +32,10 @@ use Perl6::Slurp;
 use strict;
 use warnings;
 
-use vars qw($VERSION @ISA @EXPORT_OK %EXPORT_TAGS);
-$VERSION = '1.04';
+our $VERSION = '1.05';
 
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(
+our @ISA = qw(Exporter);
+our @EXPORT_OK = qw(
   write_conf_file
   rollback_gbrowse
   update_gbrowse
@@ -45,7 +43,7 @@ $VERSION = '1.04';
   make_link
   gbrowse_gene_names
 );
-%EXPORT_TAGS = (all => \@EXPORT_OK);
+our %EXPORT_TAGS = (all => \@EXPORT_OK);
  
 =head1 Functions
 
@@ -83,9 +81,9 @@ sub gbrowse_gene_names
 
 =head2 make_link()
 
-  Given a list of Bio::SeqFeature gene objects, a BioStudio parameter hashref,
-  and the BioStudio config hashref, generate a hashref such that the key is the
-  gene's id and the value is a display friendly link to GBrowse.
+Given a list of Bio::SeqFeature gene objects, a BioStudio parameter hashref, and
+the BioStudio config hashref, generate a hashref such that the key is the gene
+id and the value is a display friendly link to GBrowse.
 
 =cut
 
@@ -99,8 +97,8 @@ sub make_link
 
 =head2 get_gbrowse_src_list()
 
-  Given the BioStudio config hashref, return a list of all of the chromosomes
-  that are available through GBrowse
+Given the BioStudio config hashref, return a list of all of the chromosomes that
+are available through GBrowse
 
 =cut
 
@@ -120,9 +118,9 @@ sub get_gbrowse_src_list
 
 =head2 write_conf_file()
 
-  Given the BioStudio config hashref, the name of the chromosome, and a note,
-  create a configuration file by replacing values in the BioStudio template
-  of a GBrowse conf file.
+Given the BioStudio config hashref, the name of the chromosome, and a note, 
+create a configuration file by replacing values in the BioStudio template of a 
+GBrowse conf file.
 
 =cut
 
@@ -160,8 +158,8 @@ sub write_conf_file
 
 =head2 update_gbrowse()
 
-  Given a BioStudio config hashref and a BioStudio parameter hashref, update
-  GBrowse - reload the database, write the configuration file, and pass a link.
+Given a BioStudio config hashref and a BioStudio parameter hashref, update
+GBrowse - reload the database, write the configuration file, and pass a link.
 
 =cut
 
@@ -182,8 +180,8 @@ sub update_gbrowse
 
 =head2 rollback_gbrowse()
 
-  Given a BioStudio config hashref and a BioStudio parameter hashref, remove
-  a source from GBrowse.
+Given a BioStudio config hashref and a BioStudio parameter hashref, remove a 
+source from GBrowse.
 
 =cut
 
@@ -204,6 +202,7 @@ sub rollback_gbrowse
 }
 
 1;
+
 __END__
 
 =head1 COPYRIGHT AND LICENSE
@@ -211,26 +210,29 @@ __END__
 Copyright (c) 2011, BioStudio developers
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-    * Neither the name of the Johns Hopkins nor the
-      names of the developers may be used to endorse or promote products
-      derived from this software without specific prior written permission.
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this 
+list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or 
+other materials provided with the distribution.
+
+* Neither the name of the Johns Hopkins nor the names of the developers may be 
+used to endorse or promote products derived from this software without specific 
+prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =cut
