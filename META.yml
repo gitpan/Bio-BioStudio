@@ -1,84 +1,88 @@
 ---
-abstract: 'functions for the design of synthetic genomes'
+abstract: 'perl for the design of synthetic chromosomes'
 author:
-  - 'Sarah Richardson <notadoctor@jhu.edu>'
+  - 'Sarah Richardson <smrichardson@lbl.gov>'
 build_requires:
   Test::More: 0
 configure_requires:
   Module::Build: 0.38
 dynamic_config: 1
-generated_by: 'Module::Build version 0.38, CPAN::Meta::Converter version 2.112150'
+generated_by: 'Module::Build version 0.4007, CPAN::Meta::Converter version 2.120351'
 license: bsd
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
 name: Bio-BioStudio
 provides:
-  Bio::BioStudio::BLAST:
-    file: lib/Bio/BioStudio/BLAST.pm
-    version: 1.05
-  Bio::BioStudio::Basic:
-    file: lib/Bio/BioStudio/Basic.pm
-    version: 1.05
+  Bio::BioStudio:
+    file: lib/Bio/BioStudio.pm
+    version: 2
+  Bio::BioStudio::Analyze::ArbitraryFeatures:
+    file: lib/Bio/BioStudio/Analyze/ArbitraryFeatures.pm
+    version: 2.00
+  Bio::BioStudio::Analyze::ProteinCodingGenes:
+    file: lib/Bio/BioStudio/Analyze/ProteinCodingGenes.pm
+    version: 2.00
+  Bio::BioStudio::Analyze::RestrictionEnzymes:
+    file: lib/Bio/BioStudio/Analyze/RestrictionEnzymes.pm
+    version: 2.00
   Bio::BioStudio::Cairo:
     file: lib/Bio/BioStudio/Cairo.pm
-    version: 1.05
+    version: 2.00
   Bio::BioStudio::Chunk:
     file: lib/Bio/BioStudio/Chunk.pm
-    version: 1.05
+    version: 2
+  Bio::BioStudio::DB:
+    file: lib/Bio/BioStudio/DB.pm
+    version: 2.00
   Bio::BioStudio::Diff:
     file: lib/Bio/BioStudio/Diff.pm
-    version: 1.05
+    version: 2
   Bio::BioStudio::Diff::Difference:
     file: lib/Bio/BioStudio/Diff/Difference.pm
-    version: 0
-  Bio::BioStudio::Diff::Factory:
-    file: lib/Bio/BioStudio/Diff/Factory.pm
-    version: 0
-  Bio::BioStudio::Feature:
-    file: lib/Bio/BioStudio/Feature.pm
-    version: 1.05
+    version: 2
+  Bio::BioStudio::Exceptions:
+    file: lib/Bio/BioStudio/Exceptions.pm
+    version: 2
   Bio::BioStudio::Foswiki:
     file: lib/Bio/BioStudio/Foswiki.pm
-    version: 1.05
+    version: 1.06
   Bio::BioStudio::GBrowse:
     file: lib/Bio/BioStudio/GBrowse.pm
-    version: 1.05
-  Bio::BioStudio::GFF3:
-    file: lib/Bio/BioStudio/GFF3.pm
-    version: 1.05
+    version: 2.00
   Bio::BioStudio::Git:
     file: lib/Bio/BioStudio/Git.pm
-    version: 1.05
+    version: 1.06
   Bio::BioStudio::Marker:
     file: lib/Bio/BioStudio/Marker.pm
-    version: 1.05
+    version: 2
+  Bio::BioStudio::Mask:
+    file: lib/Bio/BioStudio/Mask.pm
+    version: 2.00
   Bio::BioStudio::Megachunk:
     file: lib/Bio/BioStudio/Megachunk.pm
-    version: 1.05
-  Bio::BioStudio::MySQL:
-    file: lib/Bio/BioStudio/MySQL.pm
-    version: 1.05
+    version: 2
+  Bio::BioStudio::Repository:
+    file: lib/Bio/BioStudio/Repository.pm
+    version: 2.00
   Bio::BioStudio::RestrictionEnzyme:
     file: lib/Bio/BioStudio/RestrictionEnzyme.pm
-    version: 1.05
+    version: 2
+  Bio::BioStudio::RestrictionEnzyme::Seek:
+    file: lib/Bio/BioStudio/RestrictionEnzyme/Seek.pm
+    version: 2.00
   Bio::BioStudio::RestrictionEnzyme::Store:
     file: lib/Bio/BioStudio/RestrictionEnzyme/Store.pm
-    version: 1.05
+    version: 2
 requires:
-  Bio::GeneDesign::Basic: 0
+  Bio::GeneDesign: 5
   Bio::Root::Root: 0
-  Bio::Tools::Run::StandAloneBlastPlus: 0
-  Cairo: 1.09
-  Config::Auto: 0.38
-  DBI: 1.616
   Digest::MD5: 2.51
-  Perl6::Slurp: 0.03
   Text::Diff: 1.3
-  Text::Wrap: 2009.0305
   Time::Format: 1.11
   URI::Escape: 1.59
+  YAML::Tiny: 1.5
   perl: 5.006
 resources:
   license: http://opensource.org/licenses/bsd-license.php
-version: 1.05
+version: 2.00

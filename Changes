@@ -1,6 +1,6 @@
 Revision history for Bio::BioStudio
 
-1.05
+1.06
 	Changed features to Bio::Root::Root descended objects
 	updated Exporter and Version information
 1.05 

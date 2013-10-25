@@ -4,18 +4,18 @@
 
 =head1 NAME
 
-Bio::BioStudio::Diff::Difference - holds the difference between two 
+Bio::BioStudio::Diff::Difference - holds the difference between two
 Bio::DB::SeqFeature objects
 
 =head1 VERSION
 
-Version 1.05
+Version 1.06
 
 =head1 DESCRIPTION
 
 =head1 AUTHOR
 
-Sarah Richardson <notadoctor@jhu.edu>.
+Sarah Richardson <smrichardson@lbl.gov>.
 
 =head1 FUNCTIONS
 
@@ -23,15 +23,18 @@ Sarah Richardson <notadoctor@jhu.edu>.
 
 package Bio::BioStudio::Diff::Difference;
 
-use Switch;
 use CGI qw(td);
+
 use strict;
+use warnings;
 
 use base qw(Bio::Root::Root);
 
+our $VERSION = 2.00;
+
 =head2 new
 
- Title   : new                                     
+ Title   : new
  Function:
  Returns : a new Bio::BioStudio::Diff:Difference object
  Args    : -oldfeat     => Bio::DB::SeqFeature object
@@ -80,9 +83,9 @@ sub new
   $oldfeat && $self->oldfeat($oldfeat);
   $newfeat && $self->newfeat($newfeat);
  
-  my $id = $oldfeat ? $oldfeat->Tag_load_id : $newfeat->Tag_load_id;  
+  my $id = $oldfeat ? $oldfeat->display_name : $newfeat->display_name;
   my $feature = $newfeat ? $newfeat : $oldfeat;
-  $self->feature($feature);                 
+  $self->feature($feature);
   $self->id($id);
  
   $oldsubfeat && $self->oldsubfeat($oldsubfeat);
@@ -126,13 +129,10 @@ sub new
       elsif ($code == 2) #Inserted features
       {
         my $verb = "inserted";
-        switch ($type)
-        {
-          case "restriction_enzyme_recognition_site" {$verb = "annotated"}
-          case "PCR_product"                         {$verb = "annotated"}
-          case "megachunk"                           {$verb = "annotated"}
-          case "chunk"                               {$verb = "annotated"}
-        }
+        $verb = 'annotated' if ($type eq 'restriction_enzyme_recognition_site');
+        $verb = 'annotated' if ($type eq 'PCR_product');
+        $verb = 'annotated' if ($type eq 'chunk');
+        $verb = 'annotated' if ($type eq 'megachunk');
         $verb = $feature->has_tag("newseq") ? "added" : $verb;
         $display = "$type $id was $verb";
       }
@@ -166,7 +166,7 @@ sub new
       elsif ($code == 8) #change in nucleotide sequence
       {
         $display = "$type $id\'s sequence changed";
-      }   
+      }
     }
     if ($code == 9) #Lost annotation
     {
@@ -473,32 +473,34 @@ sub htmlline
 
 __END__
 
+
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2011, BioStudio developers
+Copyright (c) 2013, BioStudio developers
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
-* Redistributions of source code must retain the above copyright notice, this 
+* Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
 
 * Redistributions in binary form must reproduce the above copyright notice, this
-list of conditions and the following disclaimer in the documentation and/or 
+list of conditions and the following disclaimer in the documentation and/or
 other materials provided with the distribution.
 
-* Neither the name of the Johns Hopkins nor the names of the developers may be 
-used to endorse or promote products derived from this software without specific 
-prior written permission.
+* The names of Johns Hopkins, the Joint Genome Institute, the Lawrence Berkeley
+National Laboratory, the Department of Energy, and the BioStudio developers may
+not be used to endorse or promote products derived from this software without
+specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
-INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

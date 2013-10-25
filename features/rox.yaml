@@ -1,0 +1,5 @@
+name: rox
+type: site_specific_recombination_target_region
+source: BIO
+sequence: TAACTTTAAATAATGCCAATTATTTAAAGTTA
+

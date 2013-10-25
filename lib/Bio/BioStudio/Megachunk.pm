@@ -8,23 +8,26 @@ Bio::BioStudio::Megachunk
 
 =head1 VERSION
 
-Version 1.05
+Version 2.00
 
 =head1 DESCRIPTION
 
 =head1 AUTHOR
 
-Sarah Richardson <notadoctor@jhu.edu>
+Sarah Richardson <smrichardson@lbl.gov>
 
 =cut
 
 package Bio::BioStudio::Megachunk;
 
 use strict;
+use warnings;
 
 use base qw(Bio::Root::Root);
 
-my $VERSION = 1.05;
+our $VERSION = 2.00;
+my $enztype = 'Bio::BioStudio::RestrictionEnzyme';
+my $markertype = 'Bio::BioStudio::Marker';
 
 =head1 CONSTRUCTORS
 
@@ -41,10 +44,10 @@ sub new
 {
   my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
-  
+
   bless $self, $class;
-  
-  my ($name, $excisor, $frange, $trange, $start, $end, $marker, $omarker, 
+
+  my ($name, $excisor, $frange, $trange, $start, $end, $marker, $omarker,
       $prevenz, $chunks, $markercount, $firstmarker, $lastlastpos, $pexcisor) =
      $self->_rearrange([qw(NAME
                            EXCISOR
@@ -60,19 +63,19 @@ sub new
                            FIRSTMARKER
                            LASTLASTPOS
                            PEXCISOR)], @args);
-  
+
   $marker && $self->marker($marker);
   $omarker && $self->omarker($omarker);
   $name && $self->name($name);
   $frange && $self->frange($frange);
-  
-  $lastlastpos && $self->lastlastpos($lastlastpos);  
-  $firstmarker && $self->firstmarker($firstmarker);  
-  $markercount && $self->markercount($markercount);  
-  $chunks && $self->chunks($chunks);  
-  $end && $self->end($end);  
-  $start && $self->start($start);  
-  $trange && $self->trange($trange); 
+
+  $lastlastpos && $self->lastlastpos($lastlastpos);
+  $firstmarker && $self->firstmarker($firstmarker);
+  $markercount && $self->markercount($markercount);
+  $chunks && $self->chunks($chunks);
+  $end && $self->end($end);
+  $start && $self->start($start);
+  $trange && $self->trange($trange);
   $excisor && $self->excisor($excisor);
   $pexcisor && $self->pexcisor($pexcisor);
 
@@ -92,11 +95,11 @@ sub marker
   my ($self, $value) = @_;
   if (defined $value)
   {
-	  $self->throw("object of class " . ref($value) . " does not implement ".
-		    "Bio::BioStudio::Marker.") unless $value->isa("Bio::BioStudio::Marker");
-    $self->{'marker'} = $value;
+	  $self->throw("object isa " . ref($value) . " not a " . $markertype)
+      unless $value->isa($markertype);
+    $self->{marker} = $value;
   }
-  return $self->{'marker'};
+  return $self->{marker};
 }
 
 =head2 omarker
@@ -108,11 +111,11 @@ sub omarker
   my ($self, $value) = @_;
   if (defined $value)
   {
-	  $self->throw("object of class " . ref($value) . " does not implement ".
-		    "Bio::BioStudio::Marker.") unless $value->isa("Bio::BioStudio::Marker");
-    $self->{'omarker'} = $value;
+	  $self->throw("object isa " . ref($value) . " not a " . $markertype)
+      unless $value->isa($markertype);
+    $self->{omarker} = $value;
   }
-  return $self->{'omarker'};
+  return $self->{omarker};
 }
 
 =head2 prevenz
@@ -124,12 +127,11 @@ sub prevenz
   my ($self, $value) = @_;
   if (defined $value)
   {
-	  $self->throw("object of class " . ref($value) . " does not implement ".
-		    "Bio::BioStudio::RestrictionEnzyme.") 
-		  unless $value->isa("Bio::BioStudio::RestrictionEnzyme");
-    $self->{'prevenz'} = $value;
+	  $self->throw("object isa " . ref($value) . " not a ". $enztype)
+      unless $value->isa($enztype);
+    $self->{prevenz} = $value;
   }
-  return $self->{'prevenz'};
+  return $self->{prevenz};
 }
 
 =head2 excisor
@@ -141,12 +143,11 @@ sub excisor
   my ($self, $value) = @_;
   if (defined $value)
   {
-	  $self->throw("object of class " . ref($value) . " does not implement ".
-		    "Bio::BioStudio::RestrictionEnzyme.") 
-		  unless $value->isa("Bio::BioStudio::RestrictionEnzyme");
-    $self->{'excisor'} = $value;
+	  $self->throw("object isa " . ref($value) . " not a ". $enztype)
+      unless $value->isa($enztype);
+    $self->{excisor} = $value;
   }
-  return $self->{'excisor'};
+  return $self->{excisor};
 }
 
 =head2 pexcisor
@@ -158,12 +159,11 @@ sub pexcisor
   my ($self, $value) = @_;
   if (defined $value)
   {
-	  $self->throw("object of class " . ref($value) . " does not implement ".
-		    "Bio::BioStudio::RestrictionEnzyme.") 
-		  unless $value->isa("Bio::BioStudio::RestrictionEnzyme");
-    $self->{'pexcisor'} = $value;
+	  $self->throw("object isa " . ref($value) . " not a ". $enztype)
+      unless $value->isa($enztype);
+    $self->{pexcisor} = $value;
   }
-  return $self->{'pexcisor'};
+  return $self->{pexcisor};
 }
 
 =head2 name
@@ -175,9 +175,9 @@ sub name
   my ($self, $value) = @_;
   if (defined $value)
   {
-    $self->{'name'} = $value;
+    $self->{name} = $value;
   }
-  return $self->{'name'};
+  return $self->{name};
 }
 
 =head2 frange
@@ -189,9 +189,9 @@ sub frange
   my ($self, $value) = @_;
   if (defined $value)
   {
-    $self->{'frange'} = $value;
+    $self->{frange} = $value;
   }
-  return $self->{'frange'};
+  return $self->{frange};
 }
 
 =head2 trange
@@ -203,9 +203,9 @@ sub trange
   my ($self, $value) = @_;
   if (defined $value)
   {
-    $self->{'trange'} = $value;
+    $self->{trange} = $value;
   }
-  return $self->{'trange'};
+  return $self->{trange};
 }
 
 =head2 start
@@ -217,9 +217,9 @@ sub start
   my ($self, $value) = @_;
   if (defined $value)
   {
-    $self->{'start'} = $value;
+    $self->{start} = $value;
   }
-  return $self->{'start'};
+  return $self->{start};
 }
 
 =head2 end
@@ -231,9 +231,9 @@ sub end
   my ($self, $value) = @_;
   if (defined $value)
   {
-    $self->{'end'} = $value;
+    $self->{end} = $value;
   }
-  return $self->{'end'};
+  return $self->{end};
 }
 
 =head2 chunks
@@ -245,9 +245,9 @@ sub chunks
   my ($self, $value) = @_;
   if (defined $value)
   {
-    $self->{'chunks'} = $value;
+    $self->{chunks} = $value;
   }
-  return $self->{'chunks'};
+  return $self->{chunks};
 }
 
 =head2 markercount
@@ -259,9 +259,9 @@ sub markercount
   my ($self, $value) = @_;
   if (defined $value)
   {
-    $self->{'markercount'} = $value;
+    $self->{markercount} = $value;
   }
-  return $self->{'markercount'};
+  return $self->{markercount};
 }
 
 =head2 firstmarker
@@ -273,9 +273,9 @@ sub firstmarker
   my ($self, $value) = @_;
   if (defined $value)
   {
-    $self->{'firstmarker'} = $value;
+    $self->{firstmarker} = $value;
   }
-  return $self->{'firstmarker'};
+  return $self->{firstmarker};
 }
 
 =head2 lastlastpos
@@ -287,9 +287,9 @@ sub lastlastpos
   my ($self, $value) = @_;
   if (defined $value)
   {
-    $self->{'lastlastpos'} = $value;
+    $self->{lastlastpos} = $value;
   }
-  return $self->{'lastlastpos'};
+  return $self->{lastlastpos};
 }
 
 =head2 chunknum
@@ -299,7 +299,7 @@ sub lastlastpos
 sub chunknum
 {
   my ($self) = @_;
-  return scalar(@{$self->chunks});
+  return scalar @{$self->chunks};
 }
 
 =head2 firstchunk
@@ -318,30 +318,31 @@ __END__
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2011, BioStudio developers
+Copyright (c) 2013, BioStudio developers
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
-* Redistributions of source code must retain the above copyright notice, this 
+* Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
 
 * Redistributions in binary form must reproduce the above copyright notice, this
-list of conditions and the following disclaimer in the documentation and/or 
+list of conditions and the following disclaimer in the documentation and/or
 other materials provided with the distribution.
 
-* Neither the name of the Johns Hopkins nor the names of the developers may be 
-used to endorse or promote products derived from this software without specific 
-prior written permission.
+* The names of Johns Hopkins, the Joint Genome Institute, the Lawrence Berkeley
+National Laboratory, the Department of Energy, and the BioStudio developers may
+not be used to endorse or promote products derived from this software without
+specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
-INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

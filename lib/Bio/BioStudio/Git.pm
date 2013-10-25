@@ -8,7 +8,7 @@ Bio::BioStudio::Git - Git interaction
 
 =head1 VERSION
 
-Version 1.05
+Version 1.06
 
 =head1 DESCRIPTION
 
@@ -16,22 +16,23 @@ BioStudio functions for GFF3
 
 =head1 AUTHOR
 
-Sarah Richardson <notadoctor@jhu.edu>.
+Sarah Richardson <smrichardson@lbl.gov>.
 
 =cut
 
 package Bio::BioStudio::Git;
 
-use Exporter;
+require Exporter;
 use URI::Escape;
 use Carp;
+
+use base qw(Exporter);
 
 use strict;
 use warnings;
 
-our $VERSION = '1.05';
+our $VERSION = '1.06';
 
-our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(
   create_repo
   commit
@@ -48,7 +49,7 @@ our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 sub create_repo
 {
-  
+
 }
 
 =head2 commit
@@ -57,7 +58,7 @@ sub create_repo
 
 sub commit
 {
-  
+
 }
 
 =head2 rollback
@@ -66,7 +67,7 @@ sub commit
 
 sub rollback
 {
-  
+
 }
 
 1;
@@ -75,7 +76,7 @@ __END__
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2011, BioStudio developers
+Copyright (c) 2013, BioStudio developers
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,

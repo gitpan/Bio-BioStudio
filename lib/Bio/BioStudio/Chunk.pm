@@ -8,28 +8,24 @@ Bio::BioStudio::Chunk
 
 =head1 VERSION
 
-Version 1.05
+Version 1.06
 
 =head1 DESCRIPTION
 
-A chunk is a region of designed DNA between 6k and 10k long; it will contain
-L<Bio::GeneDesign::BuildingBlock> objects, and will be contained within
-L<Bio::BioStudio::Megachunk> objects. Chunks are typically flanked by unique
-L<Bio::BioStudio::RestrictionEnzyme> objects.
-
 =head1 AUTHOR
 
-Sarah Richardson <notadoctor@jhu.edu>
+Sarah Richardson <smrichardson@lbl.gov>
 
 =cut
 
 package Bio::BioStudio::Chunk;
 
 use strict;
+use warnings;
 
 use base qw(Bio::Root::Root);
 
-my $VERSION = 1.05;
+our $VERSION = 2.00;
 
 =head1 CONSTRUCTORS
 
@@ -61,14 +57,14 @@ sub new
 {
   my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
-  
+
   bless $self, $class;
-  
+
   my ($name, $number, $prevcand, $usedenzymes, $usedoverhangs, $enzlist, 
       $bkupenzlist, $enzyme) =
      $self->_rearrange([qw(NAME NUMBER PREVCAND USED_ENZYMES USED_OVERHANGS 
        ENZLIST BKUPENZLIST ENZYME)], @args);
-  
+
   $name && $self->name($name);
   $number && $self->number($number);
   $prevcand && $self->prevcand($prevcand);
@@ -209,7 +205,7 @@ __END__
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2011, BioStudio developers
+Copyright (c) 2013, BioStudio developers
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,

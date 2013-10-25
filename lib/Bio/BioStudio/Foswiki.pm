@@ -8,7 +8,7 @@ Bio::BioStudio::Foswiki
 
 =head1 VERSION
 
-Version 1.05
+Version 1.06
 
 =head1 DESCRIPTION
 
@@ -16,21 +16,25 @@ BioStudio functions for Foswiki interaction
 
 =head1 AUTHOR
 
-Sarah Richardson <notadoctor@jhu.edu>.
+Sarah Richardson <smrichardson@lbl.gov>.
 
 =cut
 
 package Bio::BioStudio::Foswiki;
 
-use Exporter;
+require Exporter;
+
 use Time::Format qw(%time);
+use Carp;
+use English qw(-no_match_vars);
+
+use base qw(Exporter);
 
 use strict;
 use warnings;
 
-our $VERSION = '1.05';
+our $VERSION = '1.06';
 
-our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(
   make_new_topic
   make_new_web
@@ -53,15 +57,15 @@ sub wiki_edit_prep
   $pa->{AUTHSTR} = "-- [[Main." . $BS->{wiki_user} . "]] - ";
   $pa->{AUTHSTR} .= $time{'dd Mon yyyy'} . "<br>";
   $pa->{SPWEBPATH} = $BS->{wiki_data} . "BioStudio_" . $pa->{SPECIES};
-  $pa->{CHRPATH} = $pa->{SPWEBPATH} . "/" . "Chromosome" . $pa->{CHRNAME};
+  $pa->{CHRPATH} = $pa->{SPWEBPATH} . q{/} . "Chromosome" . $pa->{CHRNAME};
   $pa->{PARENTS} = {};
-  foreach my $feattype (@$featlist)
+  foreach my $feattype (@{$featlist})
   {
-    my $name = $feattype . "s";
-    substr($name, 0, 1) = uc substr($name, 0, 1);
-    my $path = $pa->{CHRPATH} . "/" . $name . ".txt";
+    my $name = $feattype . q{s};
+    substr $name, 0, 1, (uc substr($name, 0, 1));
+    my $path = $pa->{CHRPATH} . q{/} . $name . ".txt";
     make_new_topic($path, "Features", 1, [], $BS) unless (-e $path);
-    $pa->{PARENTS}->{$feattype} = $name;  
+    $pa->{PARENTS}->{$feattype} = $name;
   }
   $pa->{WIKICOMMENTS} = [];
   return;
@@ -74,7 +78,7 @@ sub wiki_edit_prep
 sub wiki_add_feature
 {
   my ($pa, $BS, $feat, $buds) = @_;
-  my $path = $pa->{CHRPATH} . "/" . $feat->Tag_load_id . ".txt";
+  my $path = $pa->{CHRPATH} . q{/} . $feat->Tag_load_id . ".txt";
   my @arr = ($pa->{AUTHSTR});
   if ($BS->{enable_gbrowse})
   {
@@ -86,7 +90,7 @@ sub wiki_add_feature
     next if $att eq "load_id";
     push @arr, "$att: " . join(", ", $feat->get_tag_values($att)) . "<br>";
   }
-  foreach my $bud (%$buds)
+  foreach my $bud (%{$buds})
   {
     push @arr, "$bud: [[" . $buds->{$bud}->Tag_load_id . "]]<br>";
   }
@@ -102,11 +106,11 @@ sub wiki_add_feature
 sub wiki_update_feature
 {
   my ($pa, $BS, $feat, $add, $flag1, $note, $flag2) = @_;
-  my $path = $pa->{CHRPATH} . "/" . $feat->Tag_load_id . ".txt";
+  my $path = $pa->{CHRPATH} . q{/} . $feat->Tag_load_id . ".txt";
   my $text = $flag2 
             ? "See this feature in GBrowse ($pa->{OLDCHROMOSOME})"
-            : "See this feature in GBrowse ($pa->{NEWCHROMOSOME})"; 
-  open (my $WH, ">>$path") || die ("CAN'T WORK ON WIKI!");
+            : "See this feature in GBrowse ($pa->{NEWCHROMOSOME})";
+  open (my $WH, '>>', "$path") || croak ("CAN'T WORK ON WIKI!");
   if ($flag1)
   {
     print $WH "\n" . $pa->{AUTHSTR};
@@ -129,7 +133,7 @@ sub update_wiki
 {
   my ($BS, $pa, $commentarr) = @_;
   my $VERPATH = $pa->{CHRPATH} . "/$pa->{NEWCHROMOSOME}.txt";
-  my @arr = @$commentarr;
+  my @arr = @{$commentarr};
   if ($BS->{enable_gbrowse})
   {
     my $verlink = "http://$BS->{this_server}/cgi-bin/gb2/gbrowse/$pa->{NEWCHROMOSOME}";
@@ -138,6 +142,7 @@ sub update_wiki
   }
   unshift @arr, "-- [[Main." . $BS->{wiki_user} . "]] - " . $time{'dd Mon yyyy'} . "\n";
   make_new_topic($VERPATH, "Versions", 0, \@arr, $BS);
+  return;
 }
 
 =head2 make_new_web
@@ -148,9 +153,9 @@ sub make_new_web
 {
   my ($webpath, $linkreplace, $BS) = @_;
   my $now = time;
-  my $template = $BS->{wiki_default_web} . "/";
-  $linkreplace = "" unless $linkreplace;
-  my $repl = "/" . $BS->{wiki_placeholder} . "/" . $linkreplace . "/";
+  my $template = $BS->{wiki_default_web} . q{/};
+  $linkreplace = q{} unless $linkreplace;
+  my $repl = q{/} . $BS->{wiki_placeholder} . q{/} . $linkreplace . q{/};
   mkdir $webpath;
   system "cp -R $template $webpath";
   opendir(WEB, $webpath);
@@ -158,9 +163,9 @@ sub make_new_web
   closedir(WEB);
   my $auth = "/ProjectContributor/$BS->{wiki_user}/";
   my $time = "/date=\".+\"/date=\"$now\"/";
-	foreach my $name (grep {! -d && $_ !~ /\.DS\_Store/} @FILES)
+	foreach my $name (grep {! -d && $_ !~ m{\A\.}msx} @FILES)
 	{
-	  my $path = $webpath . "/" . $name;
+	  my $path = $webpath . q{/} . $name;
 	  my $temp = $path . "_tmp";
 		system ("sed -e 's$auth' $path >$temp && mv $temp $path");
 		system ("sed -e 's$time' $path >$temp && mv $temp $path");
@@ -169,6 +174,7 @@ sub make_new_web
 		  system ("sed -e 's$repl' $path >$temp && mv $temp $path");
 		}
   }
+  return;
 }
 
 =head2 make_new_topic
@@ -179,18 +185,19 @@ sub make_new_topic
 {
   my ($path, $parent, $flag, $arrref, $BS) = @_;
   my $now = time;
-  open (TOPIC, ">$path");
-  print TOPIC "\%META:TOPICINFO{author=\"$BS->{wiki_user}\" comment=\"\"";
-  print TOPIC " date=\"$now\" format=\"1.1\" version=\"1\"}\%\n";
-  print TOPIC "\%META:TOPICPARENT{name=\"$parent\"}\%\n";
+  open (my $TOPIC, '>', "$path") || croak ("Can't open $path: $OS_ERROR");
+  print $TOPIC "\%META:TOPICINFO{author=\"$BS->{wiki_user}\" comment=\"\"";
+  print $TOPIC " date=\"$now\" format=\"1.1\" version=\"1\"}\%\n";
+  print $TOPIC "\%META:TOPICPARENT{name=\"$parent\"}\%\n";
   if ($flag)
   {
-    print TOPIC "Subtopics:<br> \%SEARCH{\"parent.name='%TOPIC%'\" ";
-    print TOPIC "type=\"query\" nonoise=\"on\" format=\"[[\$topic]]\" ";
-    print TOPIC "separator=\"<br>\" }\%\n";
+    print $TOPIC "Subtopics:<br> \%SEARCH{\"parent.name='%TOPIC%'\" ";
+    print $TOPIC "type=\"query\" nonoise=\"on\" format=\"[[\$topic]]\" ";
+    print $TOPIC "separator=\"<br>\" }\%\n";
   }
-  print TOPIC @$arrref if ($arrref);
-  close TOPIC;
+  print $TOPIC @{$arrref} if ($arrref);
+  close $TOPIC;
+  return;
 }
 
 1;
@@ -199,30 +206,31 @@ __END__
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2011, BioStudio developers
+Copyright (c) 2013, BioStudio developers
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
-* Redistributions of source code must retain the above copyright notice, this 
+* Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
 
 * Redistributions in binary form must reproduce the above copyright notice, this
-list of conditions and the following disclaimer in the documentation and/or 
+list of conditions and the following disclaimer in the documentation and/or
 other materials provided with the distribution.
 
-* Neither the name of the Johns Hopkins nor the names of the developers may be 
-used to endorse or promote products derived from this software without specific 
-prior written permission.
+* The names of Johns Hopkins, the Joint Genome Institute, the Lawrence Berkeley
+National Laboratory, the Department of Energy, and the BioStudio developers may
+not be used to endorse or promote products derived from this software without
+specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
-INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

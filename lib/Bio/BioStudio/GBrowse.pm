@@ -8,91 +8,120 @@ Bio::BioStudio::GBrowse - GBrowse interaction
 
 =head1 VERSION
 
-Version 1.05
+Version 2.00
 
 =head1 DESCRIPTION
 
-BioStudio functions for GBrowse
+BioStudio functions for interacting with GBrowse
 
 =head1 AUTHOR
 
-Sarah Richardson <notadoctor@jhu.edu>.
+Sarah Richardson <smrichardson@lbl.gov>.
 
 =cut
 
 package Bio::BioStudio::GBrowse;
 
-use Exporter;
-use Bio::BioStudio::Basic qw($VERNAME &configure_BioStudio);
+require Exporter;
+use Carp;
+use English qw(-no_match_vars);
+use YAML::Tiny;
 use File::Find;
+use File::Path qw(make_path);
+use Bio::BioStudio::ConfigData();
+use GBrowse::ConfigData();
+use Digest::MD5;
+use Cache::FileCache;
 use Time::Format qw(%time);
-use Config::Auto;
-use Perl6::Slurp;
+
+use base qw(Exporter);
 
 use strict;
 use warnings;
 
-our $VERSION = '1.05';
+our $VERSION = '2.00';
 
-our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(
-  write_conf_file
-  rollback_gbrowse
-  update_gbrowse
-  get_gbrowse_src_list
-  make_link
-  gbrowse_gene_names
+  add_to_GBrowse
+  remove_from_GBrowse
+  determine_feature_color
+  link_to_feature
+  link_to_chromosome
+  get_cache_handle
 );
-our %EXPORT_TAGS = (all => \@EXPORT_OK);
- 
-=head1 Functions
+our %EXPORT_TAGS = (BS => \@EXPORT_OK);
 
-=head2 gbrowse_gene_names()
+my $VERNAME = qr{([\w]+)_[chr]*([\w\d]+)_(\d+)_(\d+)([\_\w+]*)}msix;
+our $chsh = _parse_gbrowse_colors();
 
-  Creates links to the gbrowse installation for genes
+=head1 FUNCTIONS
+
+=head2 add_to_GBrowse
 
 =cut
 
-sub gbrowse_gene_names
+sub add_to_GBrowse
 {
-  my ($genelist, $pa, $BS) = @_;
-  my $DISPLAY = {};
-  my ($pre, $prep, $post) = ("<code style=\"color:", ";\">", "</code>");
-  foreach my $gene (@$genelist)
-  {
-    my $essstatus = $gene->Tag_essential_status;
-    my $orfstatus = $gene->Tag_orf_classification;
-    my $displayname = $gene->has_tag("gene") 
-                  ?  $gene->Tag_load_id . " (" . $gene->Tag_gene . ")" 
-                  :  $gene->Tag_load_id;
-    my $fulldisplay;
-    if ($essstatus ne "Nonessential")
-    {
-      $fulldisplay = $pre . $BS->{COLORS}->{gene}->{$essstatus} . $prep . $displayname . $post;
-    }
-    else
-    {
-      $fulldisplay = $pre . $BS->{COLORS}->{gene}->{$orfstatus} . $prep . $displayname . $post;
-    }
-    $DISPLAY->{$gene->Tag_load_id} = make_link($gene, $fulldisplay, $pa, $BS);
-  }
-  return $DISPLAY;
+  my ($chromosome) = @_;
+  
+  ## update the chromosome configuration file
+  _create_chromosome_conf($chromosome);
+  
+  ## add to the GBrowse configuration file if it isn't there
+  _add_to_GBrowse_conf($chromosome);
+ 
+  return 1;
 }
 
-=head2 make_link()
-
-Given a list of Bio::SeqFeature gene objects, a BioStudio parameter hashref, and
-the BioStudio config hashref, generate a hashref such that the key is the gene
-id and the value is a display friendly link to GBrowse.
+=head2 remove_from_GBrowse
 
 =cut
 
-sub make_link
+sub remove_from_GBrowse
 {
-  my ($feat, $desc, $pa, $BS) = @_;
-  my $chr = $pa->{CHROMOSOME} ? $pa->{CHROMOSOME} : $pa->{OLDCHROMOSOME}  ? $pa->{OLDCHROMOSOME}  : $pa->{NEWCHROMOSOME};
-  my $href = "http://$BS->{this_server}/cgi-bin/gb2/gbrowse/$chr/?start=" . $feat->start . ";stop=" . $feat->end . ";ref=" . $pa->{SEQID} . ";";
-  return "<a href=\"$href\" target=\"_blank\" style=\"text-decoration:none\">$desc</a>";
+  my ($chromosome) = @_;
+	
+  my $name = $chromosome->name();
+  my $repo_p = _path_in_repository($chromosome);
+  if (-e $repo_p)
+  {
+    system "rm $repo_p";
+  }
+  my $GBconf = _path_to_conf();
+  my $GBconftmp = $GBconf . ".tmp";
+  my @args = ("sed -e \"/$name/d\" $GBconf >$GBconftmp");
+  local $SIG{CHLD} = 'DEFAULT';
+  system (@args) == 0 || croak ("BSERROR: oh no, can't edit $GBconf? $OS_ERROR");
+  system "mv $GBconftmp $GBconf";
+  return 1;
+}
+
+=head2 link_to_chromosome()
+
+=cut
+
+sub link_to_chromosome
+{
+  my ($chromosome) = @_;
+  return q{} if (! $chromosome);
+  my $href  = "http://" . _server_address() . q{/};
+  $href .= "/cgi-bin/gb2/gbrowse/" . $chromosome->name();
+  return $href;
+}
+
+=head2 link_to_feature()
+
+=cut
+
+sub link_to_feature
+{
+  my ($chromosome, $feat) = @_;
+  return q{} if (! ($feat && $chromosome));
+  my $href  = link_to_chromosome($chromosome) . q{/?};
+  $href .= "start=" . $feat->start . q{;};
+  $href .= "stop=" . $feat->end . q{;};
+  $href .= "ref=" . $chromosome->seq_id() . q{;};
+  return $href;
 }
 
 =head2 get_gbrowse_src_list()
@@ -107,7 +136,7 @@ sub get_gbrowse_src_list
 	my ($BS) = @_;
 	my @srcs;
 	find sub { push @srcs, $File::Find::name}, $BS->{conf_repository};
-	@srcs = grep {	$_ =~ /\.conf\Z/} @srcs;
+	@srcs = grep {$_ =~ m{\.conf\Z}msix} @srcs;
   my @sources;
   foreach (@srcs)
   {
@@ -116,89 +145,284 @@ sub get_gbrowse_src_list
 	return @sources;
 }
 
-=head2 write_conf_file()
-
-Given the BioStudio config hashref, the name of the chromosome, and a note, 
-create a configuration file by replacing values in the BioStudio template of a 
-GBrowse conf file.
+=head2 determine_feature_color()
 
 =cut
 
-sub write_conf_file
+sub determine_feature_color
 {
-	my ($BS, $newgffname, $note) = @_;
-	my ($SPECIES, $CHRNAME) = ($1, $2) if ($newgffname =~ $VERNAME);
-  my $SEQID    = "chr" . $CHRNAME;
-  my $BSconfpath = $BS->{BioStudio_path};
-	my $ref = slurp($BS->{reference_conf_file});
-	$ref =~ s/\*LANDMARK\*/$CHRNAME/g;
-	$ref =~ s/\*VERSION\*/$newgffname/g;
-	$ref =~ s/\*VERSIONNOTE\*/$note/g;
-	$ref =~ s/\*VERSIONNOTE\*/$BSconfpath/g;
-  mkdir $BS->{conf_repository} unless (-e $BS->{conf_repository});
-  my $spedir = $BS->{conf_repository} . "/" . $SPECIES;
-  mkdir $spedir unless (-e $spedir);
-  my $confpath = $spedir . "/" . $SEQID . "/";
-  mkdir $confpath unless (-e $confpath);
-  $confpath .= $newgffname . ".conf";
-	open (my $confout, ">", $confpath) || die "can't open new conf file $confpath : $!";
-	print $confout $ref;
-	close $confout;
-  my $confstream = slurp($BS->{GBrowse_conf_file});
-  if ($confstream !~ /\[$newgffname\]/)
+  my ($feat) = @_;
+  return "darkblue" unless ($chsh);
+  return $chsh->{$feat->primary_tag}->{default} if (exists $chsh->{$feat->primary_tag});
+  my $essstat = $feat->has_tag('essential_status') ? $feat->Tag_essential_status  : q{};
+  my $orfstat = $feat->has_tag('orf_classification') ? $feat->Tag_orf_classification : q{};
+  return $chsh->{gene}->{$essstat} if ($essstat eq "Essential");
+  return $chsh->{gene}->{$essstat} if ($essstat eq "fast_growth");
+  return $chsh->{gene}->{"transposable_element"} if ($orfstat =~ /transpos/ig);
+  return $chsh->{gene}->{$orfstat} if (exists $chsh->{gene}->{$orfstat});
+  return $chsh->{gene}->{$essstat} if (exists $chsh->{gene}->{$essstat});
+  return "yellow";
+}
+
+
+=head1 INTERNALS
+
+=head2 _path_to_GBrowse_dir
+
+=cut
+
+sub _path_to_GBrowse_dir
+{
+  my $GBrowse_conf_path = GBrowse::ConfigData->config('conf');
+  $GBrowse_conf_path .= q{/} unless substr($GBrowse_conf_path, -1, 0) eq q{/};
+  return $GBrowse_conf_path;
+}
+
+=head2 _path_to_conf
+
+=cut
+
+sub _path_to_conf
+{
+  return _path_to_GBrowse_dir() . 'GBrowse.conf';
+}
+
+=head2 _path_to_repo
+
+=cut
+
+sub _path_to_repo
+{
+  my $bs_dir = Bio::BioStudio::ConfigData->config('conf_path') . 'gbrowse/';
+  my $repo_p = $bs_dir . 'conf_repository/';
+  if (! -e $repo_p)
   {
-    open (my $gbout, ">>", $BS->{GBrowse_conf_file}) || die "can't open GBrowse conf file $BS->{GBrowse_conf_file} : $!";
-    print $gbout "\n[$newgffname]\n";
-    print $gbout "description     = $newgffname\n";
-    print $gbout "path            = $confpath\n";
-    close $gbout;
+    make_path($repo_p) || croak ("BSERROR: Can't mkdir $repo_p");
   }
-	return;	
+  return $repo_p;
 }
 
-=head2 update_gbrowse()
-
-Given a BioStudio config hashref and a BioStudio parameter hashref, update
-GBrowse - reload the database, write the configuration file, and pass a link.
+=head2 _server_address
 
 =cut
 
-sub update_gbrowse
+sub _server_address
 {
-	my ($BS, $pa) = @_;
-	
-	print "Reloading mysql database...\n\n\n";
-  Bio::BioStudio::MySQL::load_database($pa->{NEWCHROMOSOME}, $BS);
-	
-	print "Creating new conf file...\n\n\n";
-  write_conf_file($BS, $pa->{NEWCHROMOSOME}, "$pa->{NEWCHROMOSOME} created from $pa->{OLDCHROMOSOME} $time{'yymmdd'}", $pa->{SEQID});
-   
-  my $newlink = "http://" . $BS->{"this_server"} . "/cgi-bin/gb2/gbrowse/$pa->{NEWCHROMOSOME}/";
-	print "The new chromosome is <a href=\"$newlink\">$pa->{NEWCHROMOSOME}</a>.\n\n\n";
-	return;
+  return Bio::BioStudio::ConfigData->config('gbrowse_address');
 }
 
-=head2 rollback_gbrowse()
-
-Given a BioStudio config hashref and a BioStudio parameter hashref, remove a 
-source from GBrowse.
+=head2 _gbrowse_template
 
 =cut
 
-sub rollback_gbrowse
+sub _gbrowse_template
 {
-  my ($BS, $pa) = @_;
-		
-	print "Deleting conf file...";
-	system "rm $BS->{conf_repository}/$pa->{DROPPER}.conf" == 0
-	  || print "can't delete conf file!";
-  my $GBconf = $BS->{GBrowse_conf_file};
-  my $GBconftmp = $BS->{GBrowse_conf_file} . ".tmp";
-  my @args = ("sed -e \"/$pa->{DROPPER}/d\" $GBconf >$GBconftmp");
-  $SIG{CHLD} = 'DEFAULT';
-  system (@args) == 0 || die ("oh no, can't edit $GBconf? $!");
-  system "mv $GBconftmp $GBconf";
-  return;
+  my $bs_dir = Bio::BioStudio::ConfigData->config('conf_path') . 'gbrowse/';
+  return $bs_dir . 'BS_GBrowse_chromosome.conf';
+}
+
+=head2 _path_to_colors
+
+=cut
+
+sub _path_to_colors
+{
+  my $bs_dir = Bio::BioStudio::ConfigData->config('conf_path') . 'gbrowse/';
+  return $bs_dir . 'GBrowse_colors.yaml';
+}
+
+=head2 _dir_in_repository
+
+=cut
+
+sub _dir_in_repository
+{
+  my ($chromosome) = @_;
+  my $path = _path_to_repo() . $chromosome->species . q{/};
+  $path .= $chromosome->seq_id . q{/};
+  make_path($path) unless (-e $path);
+  return $path;
+}
+
+=head2 _path_in_repository();
+
+=cut
+
+sub _path_in_repository
+{
+  my ($chromosome) = @_;
+  my $path = _dir_in_repository($chromosome);
+  $path .= $chromosome->name . ".conf";
+  return $path;
+}
+
+=head2 _create_chromosome_conf()
+
+=cut
+
+sub _create_chromosome_conf
+{
+  my ($chromosome) = @_;
+
+  #Grab chromosome configuration template
+  my $template_p = _gbrowse_template();
+  open (my $BSCONF, '<', $template_p)
+    || croak "BSERROR: Can't open configuration template $template_p : $OS_ERROR";
+  my $BSref = do {local $/ = <$BSCONF>};
+  close $BSCONF;
+
+  #make edits
+  my $dbengine = $chromosome->db_engine();
+  if ($dbengine ne 'memory')
+  {
+    my $adaptor = 'DBI::' . $dbengine;
+    my $handle = 'dbi:' . $dbengine;
+    my $handlestring = '-dsn ' . $handle . q{:database=} . $chromosome->name;
+    $handlestring .= q{;host=localhost};
+    my $userstring = '-user nobody';
+    $BSref =~ s{\*ENGINE\*}{$adaptor}msixg;
+    $BSref =~ s{\*DBARG2\*}{$handlestring}msixg;
+    $BSref =~ s{\*DBARG3\*}{$userstring}msixg;
+  }
+  else
+  {
+    my $adaptor = $dbengine;
+    $BSref =~ s{\*ENGINE\*}{$adaptor}msixg;
+    $BSref =~ s{\*DBARG2\*}{}msixg;
+    $BSref =~ s{\*DBARG3\*}{}msixg;
+  }
+  
+  my $seqid = $chromosome->seq_id();
+  my $landmark = $seqid . q{:1..} . $chromosome->len();
+	$BSref =~ s{\*LANDMARK\*}{$landmark}msixg;
+  
+  my $chrname = $chromosome->name();
+	$BSref =~ s{\*VERSION\*}{$chrname}msixg;
+  
+	#$BSref =~ s{\*VERSIONNOTE\*}{}msixg;
+
+  #Compute chromosome confpath, create directories if path is new
+  my $conf_p = _path_in_repository($chromosome);
+
+  #Write out chromosome configuration file
+	open (my $CONF, '>', $conf_p)
+    || croak "BSERROR: can't open new chromosome conf $conf_p : $OS_ERROR";
+  system "chmod 777 $conf_p";
+	print $CONF $BSref;
+	close $CONF;
+  return $conf_p;
+}
+
+=head2 _add_to_GBrowse_conf()
+
+=cut
+
+sub _add_to_GBrowse_conf
+{
+  my ($chromosome) = @_;
+
+  my $chrname = $chromosome->name();
+  my $conf_p = _path_in_repository($chromosome);
+  my $gbconf_p = _path_to_conf();
+  
+  #Read GBrowse conf file;
+  open (my $CONFIN, '<', $gbconf_p)
+    || croak "BSERROR: Can't open GBrowse conf $gbconf_p : $OS_ERROR";
+  my $GBref = do {local $/ = <$CONFIN>};
+  close $CONFIN;
+
+  #if it doesn't have the chromosome, add a section
+  if ($GBref !~ m{\[$chrname\]}msix)
+  {
+    open (my $CONFOUT, '>>', $gbconf_p)
+      || croak "BSERROR: can't write GBrowse conf $gbconf_p : $OS_ERROR";
+    print $CONFOUT "\n[$chrname]\n";
+    print $CONFOUT "description     = $chrname\n";
+    print $CONFOUT "path            = $conf_p\n";
+    close $CONFOUT;
+  }
+	return 1;
+}
+
+=head2 _parse_gbrowse_colors()
+
+=cut
+
+sub _parse_gbrowse_colors
+{
+  my $bs_dir = Bio::BioStudio::ConfigData->config('conf_path') . 'gbrowse/';
+  my $path = $bs_dir . 'GBrowse_colors.yaml';
+  my $colorhref = {};
+  return $colorhref unless (-e $path);
+
+  my $yaml = YAML::Tiny->read($path);
+  foreach my $tag (keys %{$yaml->[0]})
+  {
+    $colorhref->{$tag} = $yaml->[0]->{$tag};
+  }
+  return $colorhref;
+}
+
+=head2 get_cache_handle
+
+=cut
+
+sub get_cache_handle
+{
+  my ($namespace, $username, $expire, $pinterval) = @_;
+  croak 'No namespace provided for get_cache_handle' unless ($namespace);
+  $username = $username || 'nobody';
+  $expire = $expire || '30 minutes';
+  $pinterval = $pinterval || '4 hours';
+  
+  my $cache = Cache::FileCache->new
+  (
+    {
+      namespace           => $namespace,
+      username            => $username,
+      default_expires_in  => $expire,
+      auto_purge_interval => $pinterval,
+    }
+  );
+  
+  return $cache;
+}
+
+=head1 STUBS
+
+=cut
+
+=head2 gbrowse_color_link()
+
+Creates links to the gbrowse installation for genes
+
+=cut
+
+sub gbrowse_color_link
+{
+  my ($BS, $feat) = @_;
+  my $DISPLAY = {};
+  my ($pre, $prep, $post) = ("<code style=\"color:", ";\">", "</code>");
+  my $chref = $BS->gb_colors();
+  my $color = exists $chref->{$feat->primary_tag}
+              ? exists $chref->{$feat->primary_tag}->{default}
+                ? $chref->{$feat->primary_tag}->{default}
+                : "black"
+              : "black";
+  foreach my $tag (keys %{$chref->{$feat->primary_tag}})
+  {
+    if ($feat->has_tag($tag))
+    {
+      my $val = join(q{}, $feat->get_tag_values($tag));
+      $color = $chref->{$feat->primary_tag}->{$tag}->{$val};
+      last;
+    }
+  }
+  my $displayname = $feat->has_tag("gene")
+                  ?  $feat->Tag_load_id . " (" . $feat->Tag_gene . ")" 
+                  :  $feat->Tag_load_id;
+  my $fulldisplay = $pre . $color . $prep . $displayname . $post;
+  return make_link($BS, $feat, $fulldisplay)
 }
 
 1;
@@ -207,30 +431,31 @@ __END__
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2011, BioStudio developers
+Copyright (c) 2013, BioStudio developers
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
-* Redistributions of source code must retain the above copyright notice, this 
+* Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
 
 * Redistributions in binary form must reproduce the above copyright notice, this
-list of conditions and the following disclaimer in the documentation and/or 
+list of conditions and the following disclaimer in the documentation and/or
 other materials provided with the distribution.
 
-* Neither the name of the Johns Hopkins nor the names of the developers may be 
-used to endorse or promote products derived from this software without specific 
-prior written permission.
+* The names of Johns Hopkins, the Joint Genome Institute, the Lawrence Berkeley
+National Laboratory, the Department of Energy, and the BioStudio developers may
+not be used to endorse or promote products derived from this software without
+specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
-INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

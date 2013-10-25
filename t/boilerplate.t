@@ -1,14 +1,19 @@
 #!perl -T
 
 use 5.006;
+
+use Test::More tests => 17;
+use English qw(-no_match_vars);
+use Carp;
+
 use strict;
 use warnings;
-use Test::More tests => 10;
+
 
 sub not_in_file_ok {
     my ($filename, %regex) = @_;
     open( my $fh, '<', $filename )
-        or die "couldn't open $filename for reading: $!";
+        || croak "couldn't open $filename for reading: $OS_ERROR";
 
     my %violated;
 
@@ -49,14 +54,21 @@ TODO: {
     "placeholder date/time"       => qr(Date/time)
   );
 
-  module_boilerplate_ok('lib/Bio/BioStudio/Basic.pm');
-  module_boilerplate_ok('lib/Bio/BioStudio/GFF3.pm');
-  module_boilerplate_ok('lib/Bio/BioStudio/MySQL.pm');
-  module_boilerplate_ok('lib/Bio/BioStudio/GBrowse.pm');
-  module_boilerplate_ok('lib/Bio/BioStudio/Diff.pm');
-  module_boilerplate_ok('lib/Bio/BioStudio/Foswiki.pm');
-  module_boilerplate_ok('lib/Bio/BioStudio/BLAST.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio.pm');
   module_boilerplate_ok('lib/Bio/BioStudio/Cairo.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio/Chromosome.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio/Chunk.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio/DB.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio/Diff.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio/Exceptions.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio/Foswiki.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio/GBrowse.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio/Mask.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio/Megachunk.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio/Repository.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio/RestrictionEnzyme.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio/RestrictionEnzyme/Store.pm');
+  module_boilerplate_ok('lib/Bio/BioStudio/RestrictionEnzyme/Seek.pm');
 
 
 }

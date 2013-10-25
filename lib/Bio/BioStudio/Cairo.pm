@@ -8,7 +8,7 @@ BioStudio::Cairo
 
 =head1 VERSION
 
-Version 1.05
+Version 2.00
 
 =head1 DESCRIPTION
 
@@ -16,27 +16,29 @@ BioStudio functions to draw graphic maps from annotated chromosomes
 
 =head1 AUTHOR
 
-Sarah Richardson <notadoctor@jhu.edu>.
+Sarah Richardson <smrichardson@lbl.gov>.
 
 =cut
 
 package Bio::BioStudio::Cairo;
 
-use Exporter;
-use Bio::BioStudio::Basic qw($VERNAME);
-use DBI;
-use Carp;
+require Exporter;
+use Bio::BioStudio::ConfigData;
 use Cairo;
 use POSIX;
 use Math::Trig ':pi';
+use YAML::Tiny;
+
+use base qw(Exporter);
 
 use strict;
 use warnings;
 
-our $VERSION = '1.05';
+our $VERSION = '2.00';
 
-our @ISA = qw(Exporter);
-our @EXPORT_OK = qw( 
+our @EXPORT_OK = qw(
+  parse_fonts
+  parse_colors
   draw_scale
   draw_feature
   draw_RE
@@ -51,13 +53,102 @@ our @EXPORT_OK = qw(
   draw_UTC
   draw_deletion
 );
-our %EXPORT_TAGS = (
-  all => \@EXPORT_OK, basic => [qw(draw_scale draw_feature)]);
+our %EXPORT_TAGS = (BS => \@EXPORT_OK);
 
-my %featsize = ("site_specific_recombination_target_region" => 50,
-      "stop_retained_variant" => 20);
+my %featsize = (
+  "site_specific_recombination_target_region" => 50,
+  "stop_retained_variant" => 20
+);
 
 =head1 Functions
+
+=head2 _path_to_conf
+      
+=cut
+
+sub _path_to_conf
+{
+  my $bs_dir = Bio::BioStudio::ConfigData->config('conf_path') . 'cairo/';
+  return $bs_dir;
+}
+
+=head2 parse_fonts
+
+=cut
+
+sub parse_fonts
+{
+  my $bs_dir = _path_to_conf();
+  opendir(my $FDIR, $bs_dir);
+  my @fonts = grep {$_ =~ m{\.otf\z}msix} readdir($FDIR);
+  closedir $FDIR;
+  my %fonthsh;
+  foreach my $font (@fonts)
+  {
+    my $path = $bs_dir . $font;
+    my ($name, $ext) = split m{\.}, $font;
+    $fonthsh{$name} = $path;
+  }
+  return \%fonthsh;
+}
+
+=head2 _path_to_colors
+
+=cut
+
+sub _path_to_colors
+{
+  my $bs_dir = _path_to_conf();
+  return $bs_dir . 'Cairo_colors.yaml';
+}
+
+=head2 parse_colors
+
+=cut
+
+sub parse_colors
+{
+  my ($path) = @_;
+  $path = $path || _path_to_colors();
+  my %colorhash;
+  my $yaml = YAML::Tiny->read($path);
+  foreach my $tag (keys %{$yaml->[0]})
+  {
+    my $entry =  $yaml->[0]->{$tag};
+    if (ref ($entry) eq "HASH")
+    {
+      my $def = $entry->{default} || "666666";
+      $colorhash{$tag} = {default => _RGB_to_HEX($def)};
+      foreach my $key (keys %{$yaml->[0]->{$tag}})
+      {
+        my $val = $entry->{$key} ||  $def;
+        $colorhash{$tag}->{$key} = _RGB_to_HEX($val);
+      }
+    }
+    else
+    {
+      $entry = $entry ? $entry  : "666666";
+      $colorhash{$tag} = {default => _RGB_to_HEX($entry)};
+    }
+  }
+  return \%colorhash;
+}
+
+=head2 _RGB_to_HEX
+
+=cut
+
+sub _RGB_to_HEX
+{
+  my ($rgb) = @_;
+  my $len = length($rgb);
+  my @arr;
+  for (my $i = 0; $i <= $len; $i+=2)
+  {
+    push @arr, hex(substr($rgb, $i, 2)) / 255;
+  }
+  return \@arr;
+}
 
 =head2 draw_scale
 
@@ -75,7 +166,7 @@ sub draw_scale
   my $bigScaleMarkText = $pa->{DATASTART};
   my $bigScaleMarkEnd = $pa->{LEFT_MARGIN} + $pa->{SCALE_WIDTH};
   my $totalLevel = ceil(($pa->{DATAEND} - $pa->{DATASTART}) / $pa->{LEVEL_WIDTH}) -1;
-  for (my $i = 0; $i <= $totalLevel; $i++)
+  for my $i (0 .. $totalLevel)
   {
     $ctx->move_to($pa->{LEFT_MARGIN}, $pa->{SCALE_HEIGHT} + $i * $pa->{LEVEL_HEIGHT});
     if ($i == $totalLevel)
@@ -88,6 +179,7 @@ sub draw_scale
       $ctx->rel_line_to($pa->{SCALE_WIDTH}, 0);
     }
     $ctx->stroke();
+
     for (my $j = $pa->{LEFT_DATA_MARGIN}; $j <= $bigScaleMarkEnd; $j += $bigScaleMark)
     {
       $ctx->move_to($j, $pa->{SCALE_HEIGHT} + $i * $pa->{LEVEL_HEIGHT});
@@ -137,7 +229,7 @@ sub draw_feature
       $clipEnd = $xend + 2;
       $flag = 1;
     }
-    my $clipStart = $obj->{DrawStart}; 
+    my $clipStart = $obj->{DrawStart};
     if ($clipStart <= $xbeg)
     {
        $clipStart = $xbeg - 2;
@@ -154,8 +246,8 @@ sub draw_feature
       ##I WISH THIS CLIPPING REGION WAS BETTER RESTRICTED TO OBJECT HEIGHT
       my $y = $obj->{LevelNum} * $pa->{LEVEL_HEIGHT};
       $ctx->rectangle($clipStart, $y, $clipWidth, $pa->{LEVEL_HEIGHT});
-      $ctx->clip();   
-    }   
+      $ctx->clip();
+    }
   }
  
   #Check what feature is it and start drawing (Put it in alphabetical order)
@@ -194,7 +286,7 @@ sub draw_feature
   elsif ($feat->primary_tag eq "repeat_family")
   {
     draw_repeats($ctx, $obj, $pa, $xywref);
-  } 
+  }
   elsif ($feat->primary_tag eq "universal_telomere_cap")
   {
     draw_UTC($ctx, $obj, $pa, $xywref);
@@ -202,10 +294,11 @@ sub draw_feature
   elsif ($feat->primary_tag eq "deletion")
   {
     draw_deletion($ctx, $obj, $pa, $xywref);
-  } 
+  }
   #Reset all drawing setting
   $ctx->set_dash(0);
   $ctx->reset_clip();
+  return;
 }
 
 =head2 draw_RE
@@ -217,7 +310,7 @@ sub draw_RE
   my ($ctx, $obj, $pa, $xywref) = @_;
   my $feat = $obj->{feat};
  
-  my $colref = $pa->{FEAT_RGB}->{$feat->primary_tag};
+  my $colref = $pa->{FEAT_RGB}->{restriction_enzyme_recognition_site}->{default};
   $ctx->set_source_rgba($colref->[0], $colref->[1], $colref->[2], .95);
  
   my $RELineHeight = 50.0;
@@ -231,9 +324,9 @@ sub draw_RE
   }
   else
   {
-    ($start, $radius, $movey) = @$xywref;
+    ($start, $radius, $movey) = @{$xywref};
     $radius = $radius / 2;
-  } 
+  }
   $ctx->move_to($start + $radius, $movey);
   $ctx->rel_line_to(0, -$RELineHeight);
  
@@ -256,7 +349,7 @@ sub draw_centromere
   my ($ctx, $obj, $pa, $xywref) = @_;
   my $feat = $obj->{feat};
  
-  my $colref = $pa->{FEAT_RGB}->{$feat->primary_tag};
+  my $colref = $pa->{FEAT_RGB}->{centromere}->{default};
   $ctx->set_source_rgb($colref->[0], $colref->[1], $colref->[2]);
  
   my ($start, $movey, $radius);
@@ -269,7 +362,7 @@ sub draw_centromere
   }
   else
   {
-    ($start, $movey, $radius) = @$xywref;
+    ($start, $movey, $radius) = @{$xywref};
     $radius = $radius / 2;
   }
   my $centromereRadius = 200/$pa->{FACTOR};
@@ -281,6 +374,7 @@ sub draw_centromere
   $ctx->fill_preserve();
   $ctx->set_source_rgb(0, 0, 0);
   $ctx->stroke();
+  return;
 }
 
 =head2 draw_stop
@@ -295,7 +389,7 @@ sub draw_stop
   my $pobj = $pa->{FEATURES}->{$parent};
   my $pfeat = $pobj->{feat};
  
-  my $colref = $pa->{FEAT_RGB}->{$feat->primary_tag};
+  my $colref = $pa->{FEAT_RGB}->{stop_retained_variant}->{default};
   $ctx->set_source_rgb($colref->[0], $colref->[1], $colref->[2]);
  
   my $CodonSide = 80 / $pa->{FACTOR};
@@ -309,11 +403,11 @@ sub draw_stop
     $radius = ($obj->{DrawEnd} - $start) / 2;
     $start = $obj->{DrawEnd} if ($pfeat->strand == -1);
     $movey = $obj->{LevelNum} * $pa->{LEVEL_HEIGHT} + $pa->{STRAND_Y_POS};
-    $movey += $pa->{STRAND_DISTANCE} if ($pfeat->strand == -1);   
+    $movey += $pa->{STRAND_DISTANCE} if ($pfeat->strand == -1);
   }
   else
   {
-    ($start, $movey, $radius) = @$xywref;
+    ($start, $movey, $radius) = @{$xywref};
     $radius = $radius/2;
   }
   $ctx->move_to($start + $radius, $movey);
@@ -330,6 +424,7 @@ sub draw_stop
   $ctx->fill_preserve();
   $ctx->set_source_rgb(0, 0, 0);
   $ctx->stroke();
+  return;
 }
 
 =head2 draw_ARS
@@ -341,7 +436,7 @@ sub draw_ARS
   my ($ctx, $obj, $pa, $xywref) = @_;
   my $feat = $obj->{feat};
 
-  my $colref = $pa->{FEAT_RGB}->{$feat->primary_tag};
+  my $colref = $pa->{FEAT_RGB}->{ARS}->{default};
   $ctx->set_source_rgba($colref->[0], $colref->[1], $colref->[2], .95);
   my $ARSHeight = 50;
 
@@ -350,11 +445,11 @@ sub draw_ARS
   {
     $start = $obj->{DrawStart};
     $width = $obj->{DrawEnd} - $start;
-    $movey = $obj->{LevelNum} * $pa->{LEVEL_HEIGHT} + $pa->{SCALE_HEIGHT};   
+    $movey = $obj->{LevelNum} * $pa->{LEVEL_HEIGHT} + $pa->{SCALE_HEIGHT};
   }
   else
   {
-    ($start, $movey, $width) = @$xywref;
+    ($start, $movey, $width) = @{$xywref};
   }
   $ctx->move_to($start, $movey);
  
@@ -366,6 +461,7 @@ sub draw_ARS
   $ctx->fill_preserve();
   $ctx->set_source_rgb(0, 0, 0);
   $ctx->stroke();
+  return;
 }
 
 =head2 draw_SSTR
@@ -389,11 +485,11 @@ sub draw_SSTR
   {
     $start = $obj->{DrawStart};
     $radius =  ($obj->{DrawEnd} - $start) / 2;
-    $movey = $obj->{LevelNum}*$pa->{LEVEL_HEIGHT} + $pa->{SCALE_HEIGHT};
+    $movey = $obj->{LevelNum} * $pa->{LEVEL_HEIGHT} + $pa->{SCALE_HEIGHT};
   }
   else
   {
-    ($start, $movey, $radius) = @$xywref;
+    ($start, $movey, $radius) = @{$xywref};
     $radius = $radius / 2;
   }
   $ctx->move_to($start + $radius, $movey - $SSRTsize);
@@ -405,6 +501,7 @@ sub draw_SSTR
   $ctx->fill_preserve();
   $ctx->set_source_rgb(0, 0, 0);
   $ctx->stroke();
+  return;
 }
 
 =head2 draw_CDS
@@ -423,7 +520,8 @@ sub draw_CDS
           : $feat->Tag_essential_status eq "fast_growth"
             ? "fast_growth"
             : $feat->Tag_orf_classification;
-  my $colref = $pa->{FEAT_RGB}->{$key};
+  $key = $key || 'default';
+  my $colref = $pa->{FEAT_RGB}->{gene}->{$key};
   $ctx->set_source_rgb($colref->[0], $colref->[1], $colref->[2]);
  
   my ($start, $end, $movey, $width);
@@ -439,18 +537,18 @@ sub draw_CDS
       $movey += $pa->{STRAND_DISTANCE};
       my $unitVec = (($end-$start) / abs($end-$start));
       $triLen = $triLen * $unitVec;
-    }   
+    }
   }
   else
   {
-    ($start, $movey, $width) = @$xywref;
+    ($start, $movey, $width) = @{$xywref};
     $end = $width + $start;
   }
 
   #Calculate x2 = rectangle's Len , x3 = triangle part's Len |----x2----->
   my ($x2, $x3);
   if ($width <= abs($triLen * 1.3))
-  {  
+  {
     $x2 = $end - ($end - $start) / 2-$start;
     $x3 = ($end-$start)/2;
   }
@@ -471,6 +569,7 @@ sub draw_CDS
   $ctx->fill_preserve();
   $ctx->set_source_rgb(0, 0, 0);
   $ctx->stroke();
+  return;
 }
 
 =head2 draw_intron
@@ -486,7 +585,7 @@ sub draw_intron
   my $pfeat = $pobj->{feat};
   my $CDSHeight = 50;
  
-  my $colref = $pa->{FEAT_RGB}->{$feat->primary_tag};
+  my $colref = $pa->{FEAT_RGB}->{intron}->{default};
   $ctx->set_source_rgb($colref->[0], $colref->[1], $colref->[2]);
  
   my ($start, $movey, $radius);
@@ -495,11 +594,11 @@ sub draw_intron
     $start = $obj->{DrawStart};
     $radius = ($obj->{DrawEnd} - $start) / 2;
     $movey = $pa->{STRAND_Y_POS} + $obj->{LevelNum} * $pa->{LEVEL_HEIGHT};
-    $movey += $pa->{STRAND_DISTANCE} if ($pfeat->strand == -1);   
+    $movey += $pa->{STRAND_DISTANCE} if ($pfeat->strand == -1);
   }
   else
   {
-    ($start, $movey, $radius) = @$xywref;
+    ($start, $movey, $radius) = @{$xywref};
   }
   $ctx->move_to($start, $movey);
 
@@ -509,6 +608,7 @@ sub draw_intron
  
   $ctx->set_source_rgb(0, 0, 0);
   $ctx->stroke();
+  return;
 }
 
 =head2 draw_amplicon
@@ -522,7 +622,7 @@ sub draw_amplicon
   my $gene = $feat->Tag_ingene;
   my $CDSHeight = 50;
  
-  my $colref = $pa->{FEAT_RGB}->{$feat->primary_tag};
+  my $colref = $pa->{FEAT_RGB}->{PCR_product}->{default};
   $ctx->set_source_rgba($colref->[0], $colref->[1], $colref->[2], .8);
  
   my ($start, $movey, $mwidth);
@@ -540,13 +640,13 @@ sub draw_amplicon
       $ctx->rel_line_to(0-$px3, $CDSHeight/2);
       $ctx->rel_line_to(0-$px2, 0);
       $ctx->clip();
-    }   
+    }
     $movey = $pa->{STRAND_Y_POS} + $obj->{LevelNum} * $pa->{LEVEL_HEIGHT};
     $movey += $pa->{STRAND_DISTANCE} if ($feat->strand == -1);
   }
   else
   {
-    ($start, $movey, $mwidth) = @$xywref;
+    ($start, $movey, $mwidth) = @{$xywref;}
   }
   $ctx->move_to($start, $movey);
  
@@ -558,6 +658,7 @@ sub draw_amplicon
   $ctx->fill_preserve();
   $ctx->set_source_rgb(0, 0, 0);
   $ctx->stroke();
+  return;
 }
 
 =head2 draw_repeats
@@ -569,12 +670,12 @@ sub draw_repeats
   my ($ctx, $obj, $pa, $xywref) = @_;
   my $feat = $obj->{feat};
   my $repeatfamilyHeight = 50;
-  my $colref = $pa->{FEAT_RGB}->{$feat->primary_tag};
+  my $colref = $pa->{FEAT_RGB}->{repeat_family}->{default};
   $ctx->set_source_rgba($colref->[0], $colref->[1], $colref->[2], .95);
  
   my ($start, $width, $movey);
   unless ($xywref)
-  { 
+  {
     $start = $obj->{DrawStart};
     my $end = $obj->{DrawEnd};
     $width = $end - $start;
@@ -582,7 +683,7 @@ sub draw_repeats
   }
   else
   {
-    ($start, $movey, $width) = @$xywref;
+    ($start, $movey, $width) = @{$xywref};
   }
   $ctx->move_to($start, $movey);
  
@@ -595,6 +696,7 @@ sub draw_repeats
   $ctx->fill_preserve();
   $ctx->set_source_rgb(0, 0, 0);
   $ctx->stroke();
+  return;
 }
 
 =head2 draw_UTC
@@ -608,7 +710,7 @@ sub draw_UTC
   my $radius = 50;
   my $UTCHeight = 50;
  
-  my $colref = $pa->{FEAT_RGB}->{$feat->primary_tag};
+  my $colref = $pa->{FEAT_RGB}->{universal_telomere_cap}->{default};
   $ctx->set_source_rgb($colref->[0], $colref->[1], $colref->[2]);
  
   my ($start, $end, $width, $movey);
@@ -623,14 +725,14 @@ sub draw_UTC
       $movey+= $pa->{STRAND_DISTANCE};
       my $unitVec = ($width/abs($width));
       $radius = $radius*$unitVec;
-    }   
+    }
   }
   else
   {
     $width = $xywref->[2];
     $movey = $xywref->[1];
     ($start, $end) = ($xywref->[0], $xywref->[0] + $width);
-  } 
+  }
   $ctx->move_to($start, $movey);
  
   my ($x2, $x3);
@@ -654,6 +756,7 @@ sub draw_UTC
   $ctx->fill_preserve();
   $ctx->set_source_rgb(0, 0, 0);
   $ctx->stroke();
+  return;
 }
 
 =head2 draw_deletion
@@ -668,7 +771,7 @@ sub draw_deletion
   my $width = 200/$pa->{FACTOR};
   $width = 7 if ($width < 7);
  
-  my $colref = $pa->{FEAT_RGB}->{$feat->primary_tag};
+  my $colref = $pa->{FEAT_RGB}->{deletion}->{default};
   $ctx->set_source_rgb($colref->[0], $colref->[1], $colref->[2]);
  
   my ($start, $movey);
@@ -679,10 +782,10 @@ sub draw_deletion
     $movey =  $pa->{STRAND_Y_POS} + $pa->{STRAND_DISTANCE} + $ypos;
   }
   else
-  {   
+  {
     $start = $xywref->[0];
     $movey = $xywref->[1];
-  } 
+  }
   $ctx->move_to($start - $width / 2, $movey);
 
   $ctx->rel_line_to($width, -$height);
@@ -691,6 +794,7 @@ sub draw_deletion
  
   $ctx->set_source_rgb(0, 0, 0);
   $ctx->stroke();
+  return;
 }
 
 1;
@@ -699,30 +803,31 @@ __END__
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2011, BioStudio developers
+Copyright (c) 2013, BioStudio developers
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
-* Redistributions of source code must retain the above copyright notice, this 
+* Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
 
 * Redistributions in binary form must reproduce the above copyright notice, this
-list of conditions and the following disclaimer in the documentation and/or 
+list of conditions and the following disclaimer in the documentation and/or
 other materials provided with the distribution.
 
-* Neither the name of the Johns Hopkins nor the names of the developers may be 
-used to endorse or promote products derived from this software without specific 
-prior written permission.
+* The names of Johns Hopkins, the Joint Genome Institute, the Lawrence Berkeley
+National Laboratory, the Department of Energy, and the BioStudio developers may
+not be used to endorse or promote products derived from this software without
+specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE DEVELOPERS BE LIABLE FOR ANY DIRECT, INDIRECT,
-INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
